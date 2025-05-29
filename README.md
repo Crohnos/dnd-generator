@@ -131,6 +131,71 @@ The application uses PostgreSQL with the following main tables:
 - `encounters` - Combat and role-play encounters
 - `location_npcs` - Many-to-many relationships
 
+## Production Deployment
+
+### Docker Production Build
+```bash
+# Build and deploy production stack
+just deploy
+
+# Or manually with docker-compose
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Environment Configuration
+For production, create a `.env.prod` file with:
+- Strong database passwords
+- Secure Hasura admin secret
+- Valid Anthropic API key
+- Production domain URLs
+
+### Security Considerations
+- **Hasura Admin Secret**: Change from default and use JWT auth in production
+- **API Keys**: Never commit API keys to version control
+- **CORS**: Configure specific origins instead of wildcard
+- **Database**: Use connection pooling and proper user permissions
+- **HTTPS**: Always use HTTPS in production
+
+## API Documentation
+
+### Backend Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/api/campaigns` | List all campaigns |
+| `POST` | `/api/campaigns` | Create new campaign |
+| `GET` | `/api/campaigns/:id` | Get campaign details |
+| `POST` | `/api/campaigns/:id/generate` | Generate campaign content |
+
+### Request/Response Examples
+
+**Create Campaign**
+```json
+POST /api/campaigns
+{
+  "name": "The Lost Crown",
+  "setting": "Medieval fantasy kingdom",
+  "themes": ["political intrigue", "war"],
+  "player_characters": [
+    {
+      "name": "Aragorn",
+      "class": "Ranger",
+      "race": "Human"
+    }
+  ]
+}
+```
+
+**Response**
+```json
+{
+  "id": 1,
+  "name": "The Lost Crown",
+  "status": "generating"
+}
+```
+
 ## Troubleshooting
 
 ### Services won't start
@@ -149,6 +214,19 @@ just db-reset
 Check if ports 3000, 3001, 5432, or 8080 are in use:
 ```bash
 lsof -i :3000
+```
+
+### Frontend build errors
+```bash
+cd frontend
+npm run codegen
+npm run build
+```
+
+### Missing environment variables
+```bash
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
 ## Contributing

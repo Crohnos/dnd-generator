@@ -1,35 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Calendar, Sparkles, Users, MapPin, Scroll } from 'lucide-react';
+import { Plus, Calendar, Sparkles, Users, MapPin, Scroll, AlertCircle } from 'lucide-react';
+import { useGetCampaignsQuery } from '@/generated/graphql';
 
-// Mock data for development - will be replaced with GraphQL queries
-const mockCampaigns = [
-  {
-    id: 1,
-    name: 'The Shattered Crown',
-    setting: 'A war-torn kingdom where ancient magic clashes with political intrigue',
-    themes: ['political intrigue', 'war', 'mystery'],
-    status: 'ready' as const,
-    created_at: '2024-01-15T10:30:00Z',
-    npc_count: 8,
-    location_count: 6,
-    quest_count: 5,
-  },
-  {
-    id: 2,
-    name: 'Shadows of the Underdark',
-    setting: 'Deep underground tunnels filled with ancient secrets and dark creatures',
-    themes: ['horror', 'exploration', 'underdark'],
-    status: 'generating' as const,
-    created_at: '2024-01-16T14:22:00Z',
-    npc_count: 0,
-    location_count: 0,
-    quest_count: 0,
-  },
-];
+type Campaign = {
+  id: number;
+  name: string;
+  setting?: string | null;
+  themes?: string[] | null;
+  status: string;
+  created_at: string;
+  npcs_aggregate: { aggregate: { count: number } | null } | null;
+  locations_aggregate: { aggregate: { count: number } | null } | null;
+  quest_hooks_aggregate: { aggregate: { count: number } | null } | null;
+};
 
-function CampaignCard({ campaign }: { campaign: typeof mockCampaigns[0] }) {
+function CampaignCard({ campaign }: { campaign: Campaign }) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -78,32 +65,36 @@ function CampaignCard({ campaign }: { campaign: typeof mockCampaigns[0] }) {
           </div>
         </div>
 
-        <p className="text-gray-300 mb-4 line-clamp-2">{campaign.setting}</p>
+        {campaign.setting && (
+          <p className="text-gray-300 mb-4 line-clamp-2">{campaign.setting}</p>
+        )}
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          {campaign.themes.map((theme) => (
-            <span
-              key={theme}
-              className="px-2 py-1 bg-dnd-purple bg-opacity-20 text-dnd-purple text-xs rounded-full"
-            >
-              {theme}
-            </span>
-          ))}
-        </div>
+        {campaign.themes && campaign.themes.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {campaign.themes.map((theme) => (
+              <span
+                key={theme}
+                className="px-2 py-1 bg-dnd-purple bg-opacity-20 text-dnd-purple text-xs rounded-full"
+              >
+                {theme}
+              </span>
+            ))}
+          </div>
+        )}
 
         {campaign.status === 'ready' && (
           <div className="flex justify-between text-sm text-gray-400">
             <span className="flex items-center">
               <Users className="w-4 h-4 mr-1" />
-              {campaign.npc_count} NPCs
+              {campaign.npcs_aggregate?.aggregate?.count || 0} NPCs
             </span>
             <span className="flex items-center">
               <MapPin className="w-4 h-4 mr-1" />
-              {campaign.location_count} Locations
+              {campaign.locations_aggregate?.aggregate?.count || 0} Locations
             </span>
             <span className="flex items-center">
               <Scroll className="w-4 h-4 mr-1" />
-              {campaign.quest_count} Quests
+              {campaign.quest_hooks_aggregate?.aggregate?.count || 0} Quests
             </span>
           </div>
         )}
@@ -130,8 +121,41 @@ function EmptyState() {
 }
 
 export default function CampaignsPage() {
-  // TODO: Replace with actual GraphQL query
-  const campaigns = mockCampaigns;
+  const [{ data, fetching, error }] = useGetCampaignsQuery();
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-lg">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Failed to Load Campaigns</h1>
+          <p className="text-gray-400 mb-4">
+            There was an error connecting to the GraphQL endpoint.
+          </p>
+          <div className="text-left bg-gray-800 p-4 rounded mb-6">
+            <p className="text-sm text-gray-300 mb-2">Error details:</p>
+            <p className="text-xs text-red-400 font-mono">{error.message}</p>
+          </div>
+          <div className="text-sm text-gray-400 mb-6">
+            <p>Make sure:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>Hasura is running on localhost:8080</li>
+              <li>The Next.js dev server has been restarted</li>
+              <li>Environment variables are set correctly</li>
+            </ul>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const campaigns = data?.campaigns || [];
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -149,12 +173,17 @@ export default function CampaignsPage() {
           </Link>
         </div>
 
-        {campaigns.length === 0 ? (
+        {fetching ? (
+          <div className="flex items-center justify-center py-16">
+            <Sparkles className="w-8 h-8 text-dnd-purple animate-spin mr-3" />
+            <span className="text-gray-400">Loading campaigns...</span>
+          </div>
+        ) : campaigns.length === 0 ? (
           <EmptyState />
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {campaigns.map((campaign) => (
-              <CampaignCard key={campaign.id} campaign={campaign} />
+              <CampaignCard key={campaign.id} campaign={campaign as Campaign} />
             ))}
           </div>
         )}

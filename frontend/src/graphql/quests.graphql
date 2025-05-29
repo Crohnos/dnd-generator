@@ -1,0 +1,73 @@
+query GetQuestHooks($campaignId: Int!) {
+  quest_hooks(where: { campaign_id: { _eq: $campaignId } }, order_by: { created_at: asc }) {
+    id
+    title
+    description
+    difficulty
+    reward
+    related_npc_ids
+    related_location_ids
+    status
+    created_at
+    updated_at
+  }
+}
+
+query GetQuestHook($id: Int!) {
+  quest_hooks_by_pk(id: $id) {
+    id
+    title
+    description
+    difficulty
+    reward
+    related_npc_ids
+    related_location_ids
+    status
+    created_at
+    updated_at
+    campaign {
+      id
+      name
+    }
+  }
+}
+
+mutation InsertQuestHooks($questHooks: [quest_hooks_insert_input!]!) {
+  insert_quest_hooks(objects: $questHooks) {
+    returning {
+      id
+      title
+    }
+  }
+}
+
+mutation UpdateQuestStatus($id: Int!, $status: String!) {
+  update_quest_hooks_by_pk(pk_columns: { id: $id }, _set: { status: $status }) {
+    id
+    status
+  }
+}
+
+query GetEncounters($campaignId: Int!) {
+  encounters(where: { campaign_id: { _eq: $campaignId } }, order_by: { created_at: asc }) {
+    id
+    title
+    description
+    difficulty
+    creatures
+    environmental_factors
+    location {
+      id
+      name
+    }
+  }
+}
+
+mutation InsertEncounters($encounters: [encounters_insert_input!]!) {
+  insert_encounters(objects: $encounters) {
+    returning {
+      id
+      title
+    }
+  }
+}

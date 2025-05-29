@@ -1,0 +1,27 @@
+table:
+  name: location_npcs
+  schema: public
+object_relationships:
+  - name: location
+    using:
+      foreign_key_constraint_on: location_id
+  - name: npc
+    using:
+      foreign_key_constraint_on: npc_id
+select_permissions:
+  - role: public
+    permission:
+      columns:
+        - id
+        - location_id
+        - npc_id
+        - relationship_type
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+        - location_id
+        - npc_id
+        - relationship_type

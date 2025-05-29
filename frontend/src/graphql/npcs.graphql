@@ -1,0 +1,54 @@
+query GetNPCs($campaignId: Int!) {
+  npcs(where: { campaign_id: { _eq: $campaignId } }, order_by: { created_at: asc }) {
+    id
+    name
+    role
+    description
+    personality
+    stats
+    secret_info
+    location_npcs {
+      location {
+        id
+        name
+      }
+      relationship_type
+    }
+  }
+}
+
+query GetNPC($id: Int!) {
+  npcs_by_pk(id: $id) {
+    id
+    name
+    role
+    description
+    personality
+    stats
+    secret_info
+    created_at
+    updated_at
+    campaign {
+      id
+      name
+    }
+    location_npcs {
+      id
+      relationship_type
+      location {
+        id
+        name
+        type
+      }
+    }
+  }
+}
+
+mutation InsertNPCs($npcs: [npcs_insert_input!]!) {
+  insert_npcs(objects: $npcs) {
+    returning {
+      id
+      name
+    }
+  }
+}

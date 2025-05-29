@@ -2,8 +2,12 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Users, MapPin, Scroll, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Users, MapPin, Scroll, BarChart3, AlertCircle, Sparkles } from 'lucide-react';
 import { useState } from 'react';
+import { NPCCard } from '@/components/NPCCard';
+import { LocationCard } from '@/components/LocationCard';
+import { QuestHookCard } from '@/components/QuestHookCard';
+import { useGetCampaignQuery } from '@/generated/graphql';
 
 // Mock data - will be replaced with GraphQL query
 const mockCampaign = {
@@ -21,25 +25,111 @@ const mockCampaign = {
       id: 1,
       name: 'Lord Aldric Blackwood',
       role: 'Noble Conspirator',
-      description: 'A cunning lord who seeks to claim the throne through manipulation and dark magic.',
+      description: 'A cunning lord who seeks to claim the throne through manipulation and dark magic. His piercing blue eyes seem to see through every lie, while his silver tongue has earned him many allies—and enemies.',
+      personality: {
+        traits: ['Ambitious', 'Manipulative', 'Charming', 'Ruthless'],
+        motivation: 'To claim the throne and restore what he believes is rightful order to the realm',
+        fears: ['Loss of control', 'Being exposed as a fraud'],
+        connections: ['Has spies in the royal court', 'Secretly funding rebel groups']
+      },
+      secret_info: 'Aldric is actually the bastard son of the previous king and believes he has a legitimate claim to the throne. He possesses a cursed amulet that grants him influence over weak-willed individuals.'
     },
+    {
+      id: 2,
+      name: 'Sister Marianne',
+      role: 'Temple Priest',
+      description: 'A devoted cleric who tends to the spiritual needs of the people while harboring doubts about the divine.',
+      personality: {
+        traits: ['Compassionate', 'Doubting', 'Protective', 'Wise'],
+        motivation: 'To protect the innocent and find true meaning in her faith',
+        fears: ['That the gods have abandoned them', 'Failing those who depend on her'],
+        connections: ['Leads the underground resistance', 'Has visions of the future']
+      },
+      secret_info: 'Marianne is losing her divine powers due to her crisis of faith, but she\'s discovered she has latent sorcerous abilities that she\'s afraid to use.'
+    },
+    {
+      id: 3,
+      name: 'Captain Marcus Ironhold',
+      role: 'Guard Captain',
+      description: 'A grizzled veteran who maintains order in the capital while questioning his loyalties.',
+      personality: {
+        traits: ['Honorable', 'Conflicted', 'Loyal', 'Weary'],
+        motivation: 'To serve justice and protect the people, regardless of who sits on the throne',
+        fears: ['Civil war destroying everything he\'s sworn to protect'],
+        connections: ['Commands the city watch', 'Secret meetings with rebel leaders']
+      },
+      secret_info: 'Marcus knows the location of the true heir and is secretly protecting them while trying to decide if they\'re worthy of the crown.'
+    }
   ],
   locations: [
     {
       id: 1,
       name: 'Shadowmere Castle',
       type: 'Castle',
-      description: 'An imposing fortress shrouded in mystery and ancient power.',
+      description: 'An imposing fortress shrouded in mystery and ancient power. Its black stone walls seem to absorb light, and strange whispers echo through its corridors.',
+      properties: {
+        atmosphere: 'Dark and foreboding, with an undercurrent of magical energy that makes visitors uneasy',
+        notable_features: ['Ancient magical wards', 'Hidden passages', 'Throne room with enchanted crown', 'Underground dungeons'],
+        secrets: ['Contains a portal to the Shadowfell in the deepest dungeon', 'The castle itself is sentient and chooses its rulers'],
+        connections: ['Connected to the capital by the King\'s Road', 'Has secret tunnels leading to the nearby forest']
+      }
     },
+    {
+      id: 2,
+      name: 'The Whispering Woods',
+      type: 'Forest',
+      description: 'A dense woodland where the trees seem to murmur secrets and the paths shift when no one is looking.',
+      properties: {
+        atmosphere: 'Mystical and alive, filled with the rustle of leaves that sound almost like voices',
+        notable_features: ['Talking trees', 'Pools of starlight', 'Ruins of an ancient druid circle', 'Wildlife that seems unusually intelligent'],
+        secrets: ['The true heir is hidden in a cottage deep within', 'Ancient fey magic still lingers here'],
+        connections: ['Borders Shadowmere Castle', 'Hidden paths to the capital']
+      }
+    },
+    {
+      id: 3,
+      name: 'The Broken Crown Tavern',
+      type: 'Tavern',
+      description: 'A bustling inn where information flows as freely as the ale, and every patron seems to have a secret.',
+      properties: {
+        atmosphere: 'Warm but tense, filled with hushed conversations and watchful eyes',
+        notable_features: ['Secret meeting rooms upstairs', 'A bard who knows every rumor', 'Customers from all walks of life', 'Hidden messages in the menu'],
+        secrets: ['Serves as headquarters for the resistance', 'The innkeeper is a retired spy'],
+        connections: ['Located in the capital city', 'Has tunnels connecting to the temple district']
+      }
+    }
   ],
   quest_hooks: [
     {
       id: 1,
       title: 'The Lost Heir',
-      description: 'Investigate rumors of a surviving heir hidden in the countryside.',
+      description: 'Investigate rumors of a surviving heir hidden in the countryside. Multiple sources claim they\'ve seen someone bearing the royal birthmark.',
       difficulty: 'medium' as const,
       status: 'available' as const,
+      reward: '500 gold pieces and a royal pardon for any past crimes',
+      related_npc_ids: [3],
+      related_location_ids: [2]
     },
+    {
+      id: 2,
+      title: 'The Cursed Amulet',
+      description: 'Strange reports of people acting against their will have been linked to a mysterious noble. Discover the source of this magical influence.',
+      difficulty: 'hard' as const,
+      status: 'available' as const,
+      reward: 'Ancient spellbook and the gratitude of the resistance',
+      related_npc_ids: [1],
+      related_location_ids: [1]
+    },
+    {
+      id: 3,
+      title: 'Crisis of Faith',
+      description: 'Help a troubled cleric who is losing her divine powers while mysterious magical events occur around her.',
+      difficulty: 'easy' as const,
+      status: 'active' as const,
+      reward: 'Divine blessing and access to temple resources',
+      related_npc_ids: [2],
+      related_location_ids: [3]
+    }
   ],
 };
 
@@ -49,21 +139,61 @@ export default function CampaignDetailPage() {
   const params = useParams();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   
-  // TODO: Replace with actual GraphQL query using params.id
-  const campaign = mockCampaign;
+  const campaignId = parseInt(params.id as string);
+  const [{ data, fetching, error }] = useGetCampaignQuery({
+    variables: { id: campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
 
-  const getDifficultyBadge = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return 'bg-green-100 text-green-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'hard':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Campaign Not Found</h1>
+          <p className="text-gray-400 mb-6">
+            The requested campaign could not be loaded.
+          </p>
+          <Link href="/campaigns" className="btn-primary">
+            Back to Campaigns
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <Sparkles className="w-16 h-16 text-dnd-purple animate-spin mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Loading Campaign</h1>
+          <p className="text-gray-400">
+            Fetching campaign details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const campaign = data?.campaigns_by_pk;
+  
+  if (!campaign) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Campaign Not Found</h1>
+          <p className="text-gray-400 mb-6">
+            The campaign with ID {campaignId} does not exist.
+          </p>
+          <Link href="/campaigns" className="btn-primary">
+            Back to Campaigns
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: BarChart3 },
@@ -91,18 +221,20 @@ export default function CampaignDetailPage() {
               <p className="text-gray-300 max-w-3xl">{campaign.setting}</p>
             </div>
             
-            <div className="mt-4 lg:mt-0">
-              <div className="flex flex-wrap gap-2">
-                {campaign.themes.map((theme) => (
-                  <span
-                    key={theme}
-                    className="px-3 py-1 bg-dnd-purple bg-opacity-20 text-dnd-purple text-sm rounded-full"
-                  >
-                    {theme}
-                  </span>
-                ))}
+            {campaign.themes && campaign.themes.length > 0 && (
+              <div className="mt-4 lg:mt-0">
+                <div className="flex flex-wrap gap-2">
+                  {campaign.themes.map((theme) => (
+                    <span
+                      key={theme}
+                      className="px-3 py-1 bg-dnd-purple bg-opacity-20 text-dnd-purple text-sm rounded-full"
+                    >
+                      {theme}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -155,7 +287,7 @@ export default function CampaignDetailPage() {
               </div>
 
               {/* Plot Summary */}
-              {campaign.metadata.plot_summary && (
+              {campaign.metadata?.plot_summary && (
                 <div className="card">
                   <h3 className="text-xl font-bold text-white mb-4">Plot Summary</h3>
                   <p className="text-gray-300">{campaign.metadata.plot_summary}</p>
@@ -163,7 +295,7 @@ export default function CampaignDetailPage() {
               )}
 
               {/* Central Conflict */}
-              {campaign.metadata.central_conflict && (
+              {campaign.metadata?.central_conflict && (
                 <div className="card">
                   <h3 className="text-xl font-bold text-white mb-4">Central Conflict</h3>
                   <p className="text-gray-300">{campaign.metadata.central_conflict}</p>
@@ -173,42 +305,56 @@ export default function CampaignDetailPage() {
           )}
 
           {activeTab === 'npcs' && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {campaign.npcs.map((npc) => (
-                <div key={npc.id} className="card">
-                  <h3 className="text-lg font-bold text-white mb-2">{npc.name}</h3>
-                  <p className="text-dnd-purple text-sm mb-3">{npc.role}</p>
-                  <p className="text-gray-300">{npc.description}</p>
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {campaign.npcs && campaign.npcs.length > 0 ? (
+                campaign.npcs.map((npc) => (
+                  <NPCCard key={npc.id} npc={npc} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <Users className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">No NPCs Yet</h3>
+                  <p className="text-gray-400">
+                    NPCs will appear here once the campaign generation is complete.
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           )}
 
           {activeTab === 'locations' && (
-            <div className="grid gap-6 md:grid-cols-2">
-              {campaign.locations.map((location) => (
-                <div key={location.id} className="card">
-                  <h3 className="text-lg font-bold text-white mb-2">{location.name}</h3>
-                  <p className="text-dnd-gold text-sm mb-3">{location.type}</p>
-                  <p className="text-gray-300">{location.description}</p>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {campaign.locations && campaign.locations.length > 0 ? (
+                campaign.locations.map((location) => (
+                  <LocationCard key={location.id} location={location} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <MapPin className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">No Locations Yet</h3>
+                  <p className="text-gray-400">
+                    Locations will appear here once the campaign generation is complete.
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           )}
 
           {activeTab === 'quests' && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {campaign.quest_hooks.map((quest) => (
-                <div key={quest.id} className="card">
-                  <h3 className="text-lg font-bold text-white mb-2">{quest.title}</h3>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getDifficultyBadge(quest.difficulty)}`}>
-                      {quest.difficulty}
-                    </span>
-                  </div>
-                  <p className="text-gray-300">{quest.description}</p>
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {campaign.quest_hooks && campaign.quest_hooks.length > 0 ? (
+                campaign.quest_hooks.map((quest) => (
+                  <QuestHookCard key={quest.id} quest={quest} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <Scroll className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">No Quest Hooks Yet</h3>
+                  <p className="text-gray-400">
+                    Quest hooks will appear here once the campaign generation is complete.
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>

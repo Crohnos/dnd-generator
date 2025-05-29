@@ -1,0 +1,6 @@
+- "!include public_campaigns.yaml"
+- "!include public_npcs.yaml"
+- "!include public_locations.yaml"
+- "!include public_location_npcs.yaml"
+- "!include public_quest_hooks.yaml"
+- "!include public_encounters.yaml"

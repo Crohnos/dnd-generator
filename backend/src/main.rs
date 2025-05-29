@@ -14,7 +14,7 @@ use dnd_campaign_generator::{
 };
 use std::net::SocketAddr;
 use tower_http::{
-    cors::CorsLayer,
+    cors::{CorsLayer, Any},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
@@ -59,12 +59,25 @@ async fn main() -> anyhow::Result<()> {
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                 .on_response(DefaultOnResponse::new().level(Level::INFO)),
         )
-        .layer(CorsLayer::permissive())
+        .layer(
+            // Configure CORS based on environment
+            if cfg!(debug_assertions) {
+                // Development: Allow all origins
+                CorsLayer::permissive()
+            } else {
+                // Production: Restrict to specific origins
+                CorsLayer::new()
+                    .allow_origin(Any) // TODO: Replace with actual production domains
+                    .allow_methods([axum::http::Method::GET, axum::http::Method::POST, axum::http::Method::PUT, axum::http::Method::DELETE])
+                    .allow_headers(Any)
+            }
+        )
         .with_state(state);
 
     // Run it
     let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
     tracing::info!("D&D Campaign Generator Backend listening on {}", addr);
+    tracing::info!("Backend version: v0.2.0 - Enhanced logging enabled");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 

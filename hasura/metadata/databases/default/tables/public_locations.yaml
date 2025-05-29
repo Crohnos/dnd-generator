@@ -1,0 +1,56 @@
+table:
+  name: locations
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+array_relationships:
+  - name: location_npcs
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: location_npcs
+          schema: public
+  - name: encounters
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: encounters
+          schema: public
+  - name: npcs
+    using:
+      manual_configuration:
+        column_mapping:
+          id: location_id
+        insertion_order: null
+        remote_table:
+          name: location_npcs
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns:
+        - id
+        - campaign_id
+        - name
+        - type
+        - description
+        - connections
+        - properties
+        - created_at
+        - updated_at
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+        - campaign_id
+        - name
+        - type
+        - description
+        - connections
+        - properties

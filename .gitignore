@@ -69,3 +69,7 @@ logs/
 # Docker volumes
 postgres_data/
 postgres_prod_data/
+
+# Claude
+.claude
+.gitignore

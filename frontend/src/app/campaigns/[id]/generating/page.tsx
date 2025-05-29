@@ -2,13 +2,17 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Wand2, Users, MapPin, Scroll, CheckCircle } from 'lucide-react';
+import { Wand2, Users, MapPin, Scroll, CheckCircle, AlertCircle } from 'lucide-react';
+import { useCampaignProgressSubscription } from '@/generated/graphql';
 
 export default function GeneratingPage() {
   const params = useParams();
   const router = useRouter();
   const [progress, setProgress] = useState(0);
   const [currentPhase, setCurrentPhase] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  
+  const campaignId = parseInt(params.id as string);
 
   const phases = [
     { name: 'Generating NPCs', icon: Users, description: 'Creating compelling characters with rich backgrounds' },
@@ -17,29 +21,96 @@ export default function GeneratingPage() {
     { name: 'Finalizing Campaign', icon: CheckCircle, description: 'Connecting everything together' },
   ];
 
+  // Subscribe to campaign status updates
+  const [{ data, fetching, error: subscriptionError }] = useCampaignProgressSubscription({
+    variables: { id: campaignId },
+    pause: !campaignId,
+  });
+
   useEffect(() => {
-    // Simulate generation progress
+    if (subscriptionError) {
+      setError('Failed to connect to generation service');
+    }
+  }, [subscriptionError]);
+
+  useEffect(() => {
+    if (data?.campaigns_by_pk) {
+      const campaign = data.campaigns_by_pk;
+
+      if (campaign.status === 'ready') {
+        // Campaign is ready, show final phase and set progress to 100%
+        setCurrentPhase(phases.length - 1);
+        setProgress(100);
+        setTimeout(() => {
+          router.push(`/campaigns/${campaignId}`);
+        }, 1000);
+      } else if (campaign.status === 'error') {
+        setError('Failed to generate campaign. Please try again.');
+      }
+    }
+  }, [data, campaignId, router]);
+
+  useEffect(() => {
+    // Simulate generation progress animation (cap at 99% until actually ready)
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        if (prev >= 99) {
           clearInterval(interval);
-          // Redirect to campaign page when complete
-          setTimeout(() => {
-            router.push(`/campaigns/${params.id}`);
-          }, 1000);
-          return 100;
+          return 99; // Cap at 99% until real completion
         }
         
-        const newProgress = prev + Math.random() * 5;
-        const phase = Math.floor((newProgress / 100) * phases.length);
-        setCurrentPhase(Math.min(phase, phases.length - 1));
+        const newProgress = prev + Math.random() * 3; // Slightly slower increments
+        const phase = Math.floor((newProgress / 99) * (phases.length - 1)); // Adjust phase calculation
+        setCurrentPhase(Math.min(phase, phases.length - 2)); // Don't show final phase until ready
         
-        return Math.min(newProgress, 100);
+        return Math.min(newProgress, 99);
       });
-    }, 200);
+    }, 300); // Slightly slower animation
 
     return () => clearInterval(interval);
-  }, [params.id, router, phases.length]);
+  }, []); // phases.length is constant, safe to omit
+
+  // Trigger generation on mount
+  useEffect(() => {
+    let isMounted = true;
+    const triggerGeneration = async () => {
+      try {
+        if (!isMounted) return;
+        
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/campaigns/${campaignId}/generate`, {
+          method: 'POST',
+        });
+      } catch (err) {
+        console.error('Failed to trigger generation:', err);
+      }
+    };
+
+    if (campaignId && !isNaN(campaignId)) {
+      triggerGeneration();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [campaignId]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Generation Failed</h1>
+          <p className="text-gray-400 mb-6">{error}</p>
+          <button
+            onClick={() => router.push('/campaigns/new')}
+            className="btn-primary"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">

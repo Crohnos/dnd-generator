@@ -1,0 +1,42 @@
+table:
+  name: npcs
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+array_relationships:
+  - name: location_npcs
+    using:
+      foreign_key_constraint_on:
+        column: npc_id
+        table:
+          name: location_npcs
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns:
+        - id
+        - campaign_id
+        - name
+        - role
+        - description
+        - personality
+        - stats
+        - secret_info
+        - created_at
+        - updated_at
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+        - campaign_id
+        - name
+        - role
+        - description
+        - personality
+        - stats
+        - secret_info

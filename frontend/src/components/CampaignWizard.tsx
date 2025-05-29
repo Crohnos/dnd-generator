@@ -1,12 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import { useCampaignStore } from '@/stores/campaignStore';
+import { useRouter } from 'next/navigation';
+import { useCampaignStore, PlayerCharacter } from '@/stores/campaignStore';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Wand2 } from 'lucide-react';
+import clsx from 'clsx';
 
-const TOTAL_STEPS = 4;
+const WIZARD_STEPS = [
+  { id: 0, name: 'Basic Information', description: 'Name your campaign' },
+  { id: 1, name: 'Player Characters', description: 'Add your players' },
+  { id: 2, name: 'World & Themes', description: 'Set the stage' },
+  { id: 3, name: 'Review & Generate', description: 'Create your campaign' },
+];
+
+const CHARACTER_CLASSES = [
+  'Fighter', 'Wizard', 'Rogue', 'Cleric', 'Ranger', 'Paladin', 
+  'Barbarian', 'Sorcerer', 'Warlock', 'Druid', 'Monk', 'Bard'
+];
+
+const CHARACTER_RACES = [
+  'Human', 'Elf', 'Dwarf', 'Halfling', 'Dragonborn', 'Gnome', 
+  'Half-Elf', 'Half-Orc', 'Tiefling'
+];
+
+const CAMPAIGN_THEMES = [
+  'Political Intrigue', 'War', 'Mystery', 'Exploration', 'Horror', 
+  'Comedy', 'Romance', 'Apocalyptic', 'Urban', 'Wilderness', 
+  'Underdark', 'Planar Travel'
+];
 
 export function CampaignWizard() {
+  const router = useRouter();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const {
     currentStep,
     name,
@@ -16,250 +43,526 @@ export function CampaignWizard() {
     setName,
     setSetting,
     setThemes,
-    setCurrentStep,
+    addPlayerCharacter,
+    updatePlayerCharacter,
+    removePlayerCharacter,
     nextStep,
     prevStep,
     isStepValid,
     reset,
   } = useCampaignStore();
 
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const availableThemes = [
-    'political intrigue',
-    'war',
-    'mystery',
-    'exploration',
-    'horror',
-    'comedy',
-    'romance',
-    'apocalyptic',
-    'urban',
-    'wilderness',
-    'underdark',
-    'planar travel',
-  ];
-
-  const handleThemeToggle = (theme: string) => {
-    const newThemes = themes.includes(theme)
-      ? themes.filter(t => t !== theme)
-      : [...themes, theme];
-    setThemes(newThemes);
-  };
-
   const handleGenerate = async () => {
     setIsGenerating(true);
-    
-    // TODO: Replace with actual API call to create campaign
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock campaign creation - redirect to generation page
-    const mockCampaignId = Math.floor(Math.random() * 1000);
-    window.location.href = `/campaigns/${mockCampaignId}/generating`;
+    setError(null);
+
+    const campaignData = {
+      name,
+      setting,
+      themes,
+      player_characters: playerCharacters,
+    };
+
+    console.log('=== CAMPAIGN WIZARD SUBMISSION ===');
+    console.log('Campaign Data:', JSON.stringify(campaignData, null, 2));
+    console.log('==================================');
+
+    try {
+      // Create campaign via backend API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/campaigns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(campaignData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create campaign');
+      }
+
+      const campaign = await response.json();
+      
+      // Reset the wizard state
+      reset();
+      
+      // Redirect to generation progress page
+      router.push(`/campaigns/${campaign.id}/generating`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setIsGenerating(false);
+    }
   };
 
-  const renderProgressBar = () => (
-    <div className="mb-8">
-      <div className="flex justify-between text-sm text-gray-400 mb-2">
-        <span>Step {currentStep + 1} of {TOTAL_STEPS}</span>
-        <span>{Math.round(((currentStep + 1) / TOTAL_STEPS) * 100)}%</span>
-      </div>
-      <div className="w-full bg-gray-700 rounded-full h-2">
-        <div
-          className="bg-dnd-purple h-2 rounded-full transition-all duration-300"
-          style={{ width: `${((currentStep + 1) / TOTAL_STEPS) * 100}%` }}
-        />
-      </div>
-    </div>
-  );
-
-  const renderStep = () => {
+  const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-4">Basic Information</h2>
-              <p className="text-gray-400 mb-6">Let&apos;s start with the basics for your campaign.</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Campaign Name *
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter a memorable name for your campaign"
-                className="input w-full"
-                required
-              />
-            </div>
-          </div>
-        );
-
+        return <StepBasicInfo name={name} setName={setName} />;
       case 1:
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-4">Player Characters</h2>
-              <p className="text-gray-400 mb-6">
-                Tell us about the player characters that will be part of this campaign.
-              </p>
-            </div>
-            
-            <div className="card">
-              <p className="text-gray-300 text-center">
-                Player character management will be implemented in Phase 7.
-                For now, this step is considered valid by default.
-              </p>
-            </div>
-          </div>
+          <StepPlayerCharacters
+            characters={playerCharacters}
+            onAdd={addPlayerCharacter}
+            onUpdate={updatePlayerCharacter}
+            onRemove={removePlayerCharacter}
+          />
         );
-
       case 2:
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-4">World & Themes</h2>
-              <p className="text-gray-400 mb-6">
-                Describe your campaign setting and choose themes that will shape the story.
-              </p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Campaign Setting *
-              </label>
-              <textarea
-                value={setting}
-                onChange={(e) => setSetting(e.target.value)}
-                placeholder="Describe the world, time period, and general atmosphere..."
-                className="textarea w-full h-32"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-4">
-                Themes * (Select at least one)
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {availableThemes.map((theme) => (
-                  <button
-                    key={theme}
-                    onClick={() => handleThemeToggle(theme)}
-                    className={`p-3 rounded-lg border text-sm font-medium transition-all ${
-                      themes.includes(theme)
-                        ? 'bg-dnd-purple border-dnd-purple text-white'
-                        : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
-                    }`}
-                  >
-                    {theme}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <StepWorldThemes
+            setting={setting}
+            themes={themes}
+            setSetting={setSetting}
+            setThemes={setThemes}
+          />
         );
-
       case 3:
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-4">Review & Generate</h2>
-              <p className="text-gray-400 mb-6">
-                Review your campaign details and generate your AI-powered D&D campaign.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="card">
-                <h3 className="font-semibold text-white mb-2">Campaign Name</h3>
-                <p className="text-gray-300">{name}</p>
-              </div>
-
-              <div className="card">
-                <h3 className="font-semibold text-white mb-2">Setting</h3>
-                <p className="text-gray-300">{setting}</p>
-              </div>
-
-              <div className="card">
-                <h3 className="font-semibold text-white mb-2">Themes</h3>
-                <div className="flex flex-wrap gap-2">
-                  {themes.map((theme) => (
-                    <span
-                      key={theme}
-                      className="px-2 py-1 bg-dnd-purple bg-opacity-20 text-dnd-purple text-sm rounded-full"
-                    >
-                      {theme}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating || !isStepValid(3)}
-                className="btn-primary w-full py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGenerating ? (
-                  <>
-                    <Sparkles className="mr-2 h-5 w-5 animate-spin" />
-                    Generating Campaign...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-5 w-5" />
-                    Generate Campaign
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+          <StepReview
+            name={name}
+            setting={setting}
+            themes={themes}
+            playerCharacters={playerCharacters}
+          />
         );
-
       default:
         return null;
     }
   };
 
-  const renderNavigation = () => {
-    if (currentStep === 3) return null; // Hide navigation on final step
+  return (
+    <div className="max-w-4xl mx-auto">
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          {WIZARD_STEPS.map((step, index) => (
+            <div
+              key={step.id}
+              className={clsx(
+                'flex items-center',
+                index < WIZARD_STEPS.length - 1 && 'flex-1'
+              )}
+            >
+              <div className="flex flex-col items-center">
+                <div
+                  className={clsx(
+                    'w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold',
+                    currentStep >= step.id
+                      ? 'bg-dnd-purple text-white'
+                      : 'bg-gray-700 text-gray-400'
+                  )}
+                >
+                  {step.id + 1}
+                </div>
+                <span className="text-xs mt-1 text-gray-400">{step.name}</span>
+              </div>
+              {index < WIZARD_STEPS.length - 1 && (
+                <div
+                  className={clsx(
+                    'flex-1 h-1 mx-2',
+                    currentStep > step.id ? 'bg-dnd-purple' : 'bg-gray-700'
+                  )}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <h2 className="text-2xl font-bold text-center mb-2">
+          {WIZARD_STEPS[currentStep].name}
+        </h2>
+        <p className="text-center text-gray-400">
+          {WIZARD_STEPS[currentStep].description}
+        </p>
+      </div>
 
-    return (
-      <div className="flex justify-between pt-6">
+      {/* Step Content */}
+      <div className="card p-8 mb-8">{renderStepContent()}</div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-900/50 border border-red-700 text-red-200 p-4 rounded mb-4">
+          {error}
+        </div>
+      )}
+
+      {/* Navigation */}
+      <div className="flex justify-between">
         <button
           onClick={prevStep}
           disabled={currentStep === 0}
-          className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-secondary flex items-center gap-2"
         >
-          <ChevronLeft className="mr-2 h-4 w-4" />
+          <ChevronLeft className="w-4 h-4" />
           Previous
         </button>
 
-        <button
-          onClick={nextStep}
-          disabled={!isStepValid(currentStep)}
-          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-          <ChevronRight className="ml-2 h-4 w-4" />
-        </button>
+        {currentStep < 3 ? (
+          <button
+            onClick={nextStep}
+            disabled={!isStepValid(currentStep)}
+            className="btn-primary flex items-center gap-2"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            onClick={handleGenerate}
+            disabled={!isStepValid(currentStep) || isGenerating}
+            className="btn-primary flex items-center gap-2"
+          >
+            {isGenerating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-4 h-4" />
+                Generate Campaign
+              </>
+            )}
+          </button>
+        )}
       </div>
-    );
+    </div>
+  );
+}
+
+// Step 0: Basic Information
+function StepBasicInfo({
+  name,
+  setName,
+}: {
+  name: string;
+  setName: (name: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor="campaign-name" className="block text-sm font-medium mb-2">
+        Campaign Name <span className="text-red-500">*</span>
+      </label>
+      <input
+        id="campaign-name"
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Enter your campaign name..."
+        className="input w-full"
+        autoFocus
+      />
+      <p className="text-sm text-gray-400 mt-2">
+        Choose a memorable name for your campaign
+      </p>
+    </div>
+  );
+}
+
+// Step 1: Player Characters
+function StepPlayerCharacters({
+  characters,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: {
+  characters: PlayerCharacter[];
+  onAdd: (character: PlayerCharacter) => void;
+  onUpdate: (index: number, character: PlayerCharacter) => void;
+  onRemove: (index: number) => void;
+}) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [newCharacter, setNewCharacter] = useState<PlayerCharacter>({
+    name: '',
+    class: '',
+    race: '',
+    background: '',
+    personalityTraits: [],
+  });
+
+  const handleAdd = () => {
+    if (newCharacter.name && newCharacter.class && newCharacter.race) {
+      onAdd(newCharacter);
+      setNewCharacter({
+        name: '',
+        class: '',
+        race: '',
+        background: '',
+        personalityTraits: [],
+      });
+      setIsAdding(false);
+    }
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {renderProgressBar()}
-      
-      <div className="card">
-        {renderStep()}
-        {renderNavigation()}
+    <div>
+      <div className="space-y-4 mb-4">
+        {characters.map((character, index) => (
+          <div key={index} className="bg-gray-800 p-4 rounded-lg">
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-semibold">{character.name}</h4>
+                <p className="text-sm text-gray-400">
+                  {character.race} {character.class}
+                  {character.background && ` • ${character.background}`}
+                </p>
+              </div>
+              <button
+                onClick={() => onRemove(index)}
+                className="text-red-500 hover:text-red-400"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {isAdding ? (
+        <div className="bg-gray-800 p-4 rounded-lg space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Character Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newCharacter.name}
+                onChange={(e) =>
+                  setNewCharacter({ ...newCharacter, name: e.target.value })
+                }
+                className="input w-full"
+                placeholder="e.g., Aragorn"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Background
+              </label>
+              <input
+                type="text"
+                value={newCharacter.background || ''}
+                onChange={(e) =>
+                  setNewCharacter({ ...newCharacter, background: e.target.value })
+                }
+                className="input w-full"
+                placeholder="e.g., Folk Hero"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Class <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={newCharacter.class}
+                onChange={(e) =>
+                  setNewCharacter({ ...newCharacter, class: e.target.value })
+                }
+                className="input w-full"
+              >
+                <option value="">Select a class</option>
+                {CHARACTER_CLASSES.map((cls) => (
+                  <option key={cls} value={cls}>
+                    {cls}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Race <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={newCharacter.race}
+                onChange={(e) =>
+                  setNewCharacter({ ...newCharacter, race: e.target.value })
+                }
+                className="input w-full"
+              >
+                <option value="">Select a race</option>
+                {CHARACTER_RACES.map((race) => (
+                  <option key={race} value={race}>
+                    {race}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={handleAdd} className="btn-primary">
+              Add Character
+            </button>
+            <button
+              onClick={() => {
+                setIsAdding(false);
+                setNewCharacter({
+                  name: '',
+                  class: '',
+                  race: '',
+                  background: '',
+                  personalityTraits: [],
+                });
+              }}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setIsAdding(true)}
+          className="btn-secondary w-full flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Player Character
+        </button>
+      )}
+
+      {characters.length === 0 && (
+        <p className="text-sm text-yellow-500 mt-4">
+          Add at least one player character to continue
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Step 2: World & Themes
+function StepWorldThemes({
+  setting,
+  themes,
+  setSetting,
+  setThemes,
+}: {
+  setting: string;
+  themes: string[];
+  setSetting: (setting: string) => void;
+  setThemes: (themes: string[]) => void;
+}) {
+  const toggleTheme = (theme: string) => {
+    if (themes.includes(theme)) {
+      setThemes(themes.filter((t) => t !== theme));
+    } else {
+      setThemes([...themes, theme]);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <label htmlFor="setting" className="block text-sm font-medium mb-2">
+          Setting Description <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          id="setting"
+          value={setting}
+          onChange={(e) => setSetting(e.target.value)}
+          placeholder="Describe the world your campaign takes place in..."
+          className="input w-full h-32 resize-none"
+        />
+        <p className="text-sm text-gray-400 mt-2">
+          Provide details about the world, time period, and atmosphere
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          Campaign Themes <span className="text-red-500">*</span>
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {CAMPAIGN_THEMES.map((theme) => (
+            <button
+              key={theme}
+              onClick={() => toggleTheme(theme.toLowerCase().replace(' ', '_'))}
+              className={clsx(
+                'p-2 rounded text-sm transition-colors',
+                themes.includes(theme.toLowerCase().replace(' ', '_'))
+                  ? 'bg-dnd-purple text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              )}
+            >
+              {theme}
+            </button>
+          ))}
+        </div>
+        {themes.length === 0 && (
+          <p className="text-sm text-yellow-500 mt-2">
+            Select at least one theme for your campaign
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Step 3: Review & Generate
+function StepReview({
+  name,
+  setting,
+  themes,
+  playerCharacters,
+}: {
+  name: string;
+  setting: string;
+  themes: string[];
+  playerCharacters: PlayerCharacter[];
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Campaign Summary</h3>
+        <div className="space-y-4">
+          <div>
+            <span className="text-gray-400">Name:</span>
+            <p className="font-medium">{name}</p>
+          </div>
+
+          <div>
+            <span className="text-gray-400">Setting:</span>
+            <p className="mt-1">{setting}</p>
+          </div>
+
+          <div>
+            <span className="text-gray-400">Themes:</span>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {themes.map((theme) => (
+                <span
+                  key={theme}
+                  className="px-3 py-1 bg-dnd-purple/20 text-dnd-purple rounded-full text-sm"
+                >
+                  {theme.replace('_', ' ')}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-gray-400">Player Characters:</span>
+            <div className="mt-2 space-y-2">
+              {playerCharacters.map((character, index) => (
+                <div key={index} className="bg-gray-800 p-3 rounded">
+                  <p className="font-medium">{character.name}</p>
+                  <p className="text-sm text-gray-400">
+                    {character.race} {character.class}
+                    {character.background && ` • ${character.background}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-dnd-purple/10 border border-dnd-purple/30 p-4 rounded-lg">
+        <p className="text-sm text-center">
+          Ready to generate your campaign? Click the button below to create a unique
+          world filled with NPCs, locations, and quest hooks tailored to your
+          specifications.
+        </p>
       </div>
     </div>
   );

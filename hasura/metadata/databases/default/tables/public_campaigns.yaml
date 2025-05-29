@@ -1,0 +1,65 @@
+table:
+  name: campaigns
+  schema: public
+array_relationships:
+  - name: npcs
+    using:
+      foreign_key_constraint_on:
+        column: campaign_id
+        table:
+          name: npcs
+          schema: public
+  - name: locations
+    using:
+      foreign_key_constraint_on:
+        column: campaign_id
+        table:
+          name: locations
+          schema: public
+  - name: quest_hooks
+    using:
+      foreign_key_constraint_on:
+        column: campaign_id
+        table:
+          name: quest_hooks
+          schema: public
+  - name: encounters
+    using:
+      foreign_key_constraint_on:
+        column: campaign_id
+        table:
+          name: encounters
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns:
+        - id
+        - name
+        - setting
+        - themes
+        - player_characters
+        - status
+        - metadata
+        - created_at
+        - updated_at
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+        - name
+        - setting
+        - themes
+        - player_characters
+        - status
+        - metadata
+update_permissions:
+  - role: public
+    permission:
+      columns:
+        - status
+        - metadata
+      filter: {}
+      check: {}

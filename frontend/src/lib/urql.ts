@@ -5,7 +5,7 @@ const wsClient = typeof window !== 'undefined' ? createWSClient({
   url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/v1/graphql',
   connectionParams: {
     headers: {
-      'x-hasura-admin-secret': 'hasura-admin-secret', // Development only
+      'x-hasura-admin-secret': process.env.NEXT_PUBLIC_HASURA_ADMIN_SECRET || 'hasura-admin-secret',
     },
   },
 }) : null;
@@ -30,7 +30,7 @@ export const urqlClient = createClient({
   fetchOptions: () => {
     return {
       headers: {
-        'x-hasura-admin-secret': 'hasura-admin-secret', // Development only
+        'x-hasura-admin-secret': process.env.NEXT_PUBLIC_HASURA_ADMIN_SECRET || 'hasura-admin-secret',
       },
     };
   },

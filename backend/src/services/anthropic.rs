@@ -3,6 +3,7 @@ use crate::models::{Campaign, GeneratedCampaignContent};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use std::error::Error;
 use tracing::{debug, error, info};
 
 const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
@@ -63,7 +64,6 @@ pub struct ErrorDetail {
 impl AnthropicClient {
     pub fn new(api_key: String) -> Self {
         let client = Client::builder()
-            .timeout(Duration::from_secs(120))
             .build()
             .expect("Failed to build HTTP client");
 
@@ -111,20 +111,38 @@ impl AnthropicClient {
     }
 
     async fn send_request(&self, request: AnthropicRequest) -> ApiResult<AnthropicResponse> {
-        debug!("Sending request to Anthropic API");
+        info!("Sending request to Anthropic API");
+        info!("API Key present: {}", !self.api_key.is_empty());
+        info!("API Key first 10 chars: {}...", &self.api_key.chars().take(10).collect::<String>());
+        debug!("Request model: {}", request.model);
         
-        let response = self.client
+        let response_result = self.client
             .post(ANTHROPIC_API_URL)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
             .json(&request)
             .send()
-            .await
-            .map_err(|e| {
+            .await;
+            
+        let response = match response_result {
+            Ok(resp) => resp,
+            Err(e) => {
                 error!("Network error calling Anthropic API: {}", e);
-                ApiError::Internal(anyhow::anyhow!("Network error: {}", e))
-            })?;
+                error!("Error details: {:?}", e);
+                error!("Error source: {:?}", e.source());
+                if e.is_request() {
+                    error!("Request construction error");
+                } else if e.is_connect() {
+                    error!("Connection error");
+                } else if e.is_body() {
+                    error!("Body error");
+                } else if e.is_decode() {
+                    error!("Decode error");
+                }
+                return Err(ApiError::Internal(anyhow::anyhow!("Network error: {}", e)));
+            }
+        };
 
         let status = response.status();
         
@@ -143,26 +161,35 @@ impl AnthropicClient {
         } else {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             
+            error!("Anthropic API returned error status: {}", status);
+            error!("Full error response: {}", error_text);
+            
             match status {
                 StatusCode::UNAUTHORIZED => {
-                    error!("Invalid API key");
+                    error!("Invalid API key - check ANTHROPIC_API_KEY environment variable");
                     Err(ApiError::BadRequest("Invalid API key".to_string()))
                 }
                 StatusCode::TOO_MANY_REQUESTS => {
                     error!("Rate limit exceeded");
+                    if let Ok(error_detail) = serde_json::from_str::<AnthropicError>(&error_text) {
+                        error!("Rate limit details: {}", error_detail.error.message);
+                    }
                     Err(ApiError::BadRequest("Rate limit exceeded. Please try again later.".to_string()))
                 }
                 StatusCode::BAD_REQUEST => {
                     if let Ok(error_detail) = serde_json::from_str::<AnthropicError>(&error_text) {
                         error!("Anthropic API error: {}", error_detail.error.message);
+                        error!("Error type: {:?}", error_detail.error.error_type);
                         Err(ApiError::BadRequest(error_detail.error.message))
                     } else {
-                        Err(ApiError::BadRequest("Invalid request to AI service".to_string()))
+                        error!("Could not parse error response: {}", error_text);
+                        Err(ApiError::BadRequest(format!("Invalid request: {}", error_text)))
                     }
                 }
                 _ => {
-                    error!("Anthropic API error ({}): {}", status, error_text);
-                    Err(ApiError::Internal(anyhow::anyhow!("AI service error: {}", status)))
+                    error!("Unexpected status code from Anthropic: {}", status);
+                    error!("Response body: {}", error_text);
+                    Err(ApiError::Internal(anyhow::anyhow!("AI service error ({}): {}", status, error_text)))
                 }
             }
         }
