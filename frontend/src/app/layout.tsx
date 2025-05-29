@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { UrqlProvider } from '@/components/UrqlProvider'
+import { Navigation } from '@/components/Navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,7 +18,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <UrqlProvider>
+          <div className="min-h-screen bg-gray-900">
+            <Navigation />
+            <main>{children}</main>
+          </div>
+        </UrqlProvider>
+      </body>
     </html>
   )
 }
