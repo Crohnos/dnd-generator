@@ -1,12 +1,11 @@
 use crate::error::{ApiError, ApiResult};
 use crate::models::{
-    Campaign, CampaignDetail, CreateCampaignRequest, UpdateCampaignRequest, 
-    Npc, Location, QuestHook, Encounter, GeneratedCampaignContent,
-    CreateNpcRequest, CreateLocationRequest, CreateQuestHookRequest
+    Campaign, CampaignDetail, CreateCampaignRequest,
+    Npc, Location, QuestHook, Encounter, GeneratedCampaignContent
 };
-use sqlx::{PgPool, Transaction, Postgres};
+use sqlx::PgPool;
 use std::collections::HashMap;
-use tracing::{info, error};
+use tracing::info;
 
 pub struct DatabaseService {
     pool: PgPool,
@@ -219,7 +218,7 @@ impl DatabaseService {
                 .filter_map(|name| location_name_to_id.get(name).copied())
                 .collect();
 
-            let requirements = serde_json::json!({
+            let _requirements = serde_json::json!({
                 "objectives": generated_quest.objectives
             });
 

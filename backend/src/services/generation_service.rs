@@ -1,8 +1,6 @@
-use crate::error::{ApiError, ApiResult};
-use crate::models::Campaign;
+use crate::error::ApiResult;
 use crate::services::{AnthropicClient, DatabaseService};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::{error, info};
 
 pub struct GenerationService {

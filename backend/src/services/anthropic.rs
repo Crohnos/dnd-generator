@@ -2,13 +2,12 @@ use crate::error::{ApiError, ApiResult};
 use crate::models::{Campaign, GeneratedCampaignContent};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use std::error::Error;
 use tracing::{debug, error, info};
 
 const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const MODEL: &str = "claude-sonnet-4-20250514";
-const MAX_TOKENS: u32 = 20000;
+const MAX_TOKENS: u32 = 64000;
 
 #[derive(Debug, Clone)]
 pub struct AnthropicClient {

@@ -9,7 +9,7 @@ pub struct HealthResponse {
     pub version: String,
 }
 
-pub async fn health_check(State(state): State<AppState>) -> Json<HealthResponse> {
+pub async fn health_check(State(_state): State<AppState>) -> Json<HealthResponse> {
     // For now, just return ok - we could add a pool getter to AppState if needed
     Json(HealthResponse {
         status: "ok".to_string(),
