@@ -1,24 +1,31 @@
 table:
-  name: quest_hooks
+  name: buildings
   schema: public
 object_relationships:
-  - name: campaign
+  - name: location
     using:
-      foreign_key_constraint_on: campaign_id
+      foreign_key_constraint_on: location_id
 array_relationships:
-  - name: quest_entities
+  - name: shops
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: building_id
         table:
-          name: quest_entities
+          name: shops
           schema: public
-  - name: quest_locations
+  - name: taverns
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: building_id
         table:
-          name: quest_locations
+          name: taverns
+          schema: public
+  - name: temples
+    using:
+      foreign_key_constraint_on:
+        column: building_id
+        table:
+          name: temples
           schema: public
 select_permissions:
   - role: public

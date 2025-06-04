@@ -601,24 +601,6 @@ impl DatabaseServiceEnhanced {
         Ok(subclass_id)
     }
 
-    // Getter methods for phase data
-    pub async fn get_world_building_data(&self, campaign_id: i32) -> ApiResult<JsonValue> {
-        // This would aggregate data from all world building tables
-        // For now, return a placeholder
-        Ok(json!({
-            "campaign_id": campaign_id,
-            "world_building_complete": true
-        }))
-    }
-
-    pub async fn get_pc_connected_data(&self, campaign_id: i32) -> ApiResult<JsonValue> {
-        // This would aggregate data from PC-related tables
-        // For now, return a placeholder
-        Ok(json!({
-            "campaign_id": campaign_id,
-            "pc_connected_complete": true
-        }))
-    }
 
     // Additional placeholder methods that will be fully implemented
     pub async fn save_entity(&self, tx: &mut Transaction<'_, Postgres>, campaign_id: i32, entity_type: &str, entity_data: &JsonValue) -> ApiResult<i32> {
@@ -1834,5 +1816,100 @@ impl DatabaseServiceEnhanced {
         .await?;
 
         Ok(encounter_id)
+    }
+
+    // Context building methods for phase-to-phase data passing
+    pub async fn get_phase_1a_context(&self, _campaign_id: i32) -> ApiResult<JsonValue> {
+        // Phase 1A is the first phase, no prior context needed
+        Ok(json!({}))
+    }
+
+    pub async fn get_phase_1_context(&self, campaign_id: i32) -> ApiResult<JsonValue> {
+        // Get Phase 1A data for Phase 1B and 1C
+        let response = sqlx::query_scalar::<_, JsonValue>(
+            "SELECT to_jsonb(row_to_json(t)) FROM (
+                SELECT 
+                    (SELECT json_agg(cs) FROM calendar_systems cs WHERE cs.campaign_id = $1) as calendar_systems,
+                    (SELECT json_agg(p) FROM planes p WHERE p.campaign_id = $1) as planes,
+                    (SELECT json_agg(gr) FROM geography_regions gr WHERE gr.campaign_id = $1) as geography_regions,
+                    (SELECT json_agg(hp) FROM historical_periods hp WHERE hp.campaign_id = $1) as historical_periods,
+                    (SELECT json_agg(es) FROM economic_systems es WHERE es.campaign_id = $1) as economic_systems,
+                    (SELECT json_agg(ls) FROM legal_systems ls WHERE ls.campaign_id = $1) as legal_systems,
+                    (SELECT json_agg(cb) FROM celestial_bodies cb WHERE cb.campaign_id = $1) as celestial_bodies
+            ) t"
+        )
+        .bind(campaign_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(response.unwrap_or_else(|| json!({})))
+    }
+
+    pub async fn get_phase_2_context(&self, campaign_id: i32) -> ApiResult<JsonValue> {
+        // Get Phase 1 + Phase 2A data for Phase 2B and 2C
+        let response = sqlx::query_scalar::<_, JsonValue>(
+            "SELECT to_jsonb(row_to_json(t)) FROM (
+                SELECT 
+                    -- Phase 1A context
+                    (SELECT json_agg(cs) FROM calendar_systems cs WHERE cs.campaign_id = $1) as calendar_systems,
+                    (SELECT json_agg(p) FROM planes p WHERE p.campaign_id = $1) as planes,
+                    (SELECT json_agg(gr) FROM geography_regions gr WHERE gr.campaign_id = $1) as geography_regions,
+                    -- Phase 1B context
+                    (SELECT json_agg(r) FROM races r WHERE r.campaign_id = $1) as races,
+                    (SELECT json_agg(cc) FROM character_classes cc WHERE cc.campaign_id = $1) as character_classes,
+                    (SELECT json_agg(f) FROM feats f WHERE f.campaign_id = $1) as feats,
+                    (SELECT json_agg(b) FROM backgrounds b WHERE b.campaign_id = $1) as backgrounds,
+                    -- Phase 1C context
+                    (SELECT json_agg(l) FROM languages l WHERE l.campaign_id = $1) as languages,
+                    (SELECT json_agg(c) FROM cultures c WHERE c.campaign_id = $1) as cultures,
+                    (SELECT json_agg(fa) FROM factions fa WHERE fa.campaign_id = $1) as factions,
+                    (SELECT json_agg(pa) FROM pantheons pa WHERE pa.campaign_id = $1) as pantheons,
+                    (SELECT json_agg(d) FROM deities d WHERE d.campaign_id = $1) as deities,
+                    -- Phase 2A context
+                    (SELECT json_agg(e) FROM entities e WHERE e.campaign_id = $1) as entities
+            ) t"
+        )
+        .bind(campaign_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(response.unwrap_or_else(|| json!({})))
+    }
+
+    pub async fn get_phase_3_context(&self, campaign_id: i32) -> ApiResult<JsonValue> {
+        // Get all Phase 1 + Phase 2 data for Phase 3
+        let response = sqlx::query_scalar::<_, JsonValue>(
+            "SELECT to_jsonb(row_to_json(t)) FROM (
+                SELECT 
+                    -- Phase 1 context (key elements)
+                    (SELECT json_agg(cs) FROM calendar_systems cs WHERE cs.campaign_id = $1) as calendar_systems,
+                    (SELECT json_agg(gr) FROM geography_regions gr WHERE gr.campaign_id = $1) as geography_regions,
+                    (SELECT json_agg(r) FROM races r WHERE r.campaign_id = $1) as races,
+                    (SELECT json_agg(c) FROM cultures c WHERE c.campaign_id = $1) as cultures,
+                    (SELECT json_agg(fa) FROM factions fa WHERE fa.campaign_id = $1) as factions,
+                    (SELECT json_agg(d) FROM deities d WHERE d.campaign_id = $1) as deities,
+                    -- Phase 2 context
+                    (SELECT json_agg(e) FROM entities e WHERE e.campaign_id = $1) as entities,
+                    (SELECT json_agg(l) FROM locations l WHERE l.campaign_id = $1) as locations,
+                    (SELECT json_agg(bu) FROM buildings bu WHERE bu.campaign_id = $1) as buildings,
+                    (SELECT json_agg(du) FROM dungeons du WHERE du.campaign_id = $1) as dungeons,
+                    (SELECT json_agg(i) FROM items i WHERE i.campaign_id = $1) as items
+            ) t"
+        )
+        .bind(campaign_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(response.unwrap_or_else(|| json!({})))
+    }
+
+    pub async fn get_world_building_data(&self, campaign_id: i32) -> ApiResult<JsonValue> {
+        // Legacy method - redirect to Phase 1 context
+        self.get_phase_1_context(campaign_id).await
+    }
+
+    pub async fn get_pc_connected_data(&self, campaign_id: i32) -> ApiResult<JsonValue> {
+        // Legacy method - redirect to Phase 2 context
+        self.get_phase_2_context(campaign_id).await
     }
 }

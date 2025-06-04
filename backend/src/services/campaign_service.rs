@@ -1,14 +1,16 @@
 use crate::error::{ApiError, ApiResult};
 use crate::models::{Campaign, CampaignDetail, CreateCampaignRequest, UpdateCampaignRequest, Npc, Location, QuestHook, Encounter};
-use sqlx::PgPool;
+use crate::services::GraphQLClient;
+use serde_json::{json, Value};
+use std::sync::Arc;
 
 pub struct CampaignService {
-    pool: PgPool,
+    graphql_client: Arc<GraphQLClient>,
 }
 
 impl CampaignService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(graphql_client: Arc<GraphQLClient>) -> Self {
+        Self { graphql_client }
     }
 
     pub async fn create_campaign(&self, req: CreateCampaignRequest) -> ApiResult<Campaign> {
@@ -27,120 +29,180 @@ impl CampaignService {
             metadata["generation_preferences"] = serde_json::to_value(generation_preferences).unwrap_or(serde_json::json!({}));
         }
 
-        let campaign = sqlx::query_as::<_, Campaign>(
-            r#"
-            INSERT INTO campaigns (
-                name, setting, themes, player_characters, 
-                progression_type, tone, difficulty, starting_level, 
-                campaign_length, additional_notes, metadata,
-                status, generation_phase, phase_progress, total_phases, current_phase_status
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'created', NULL, 0, 3, NULL)
-            RETURNING id, name, setting, themes, player_characters, status, 
-                     generation_phase, phase_progress, total_phases, current_phase_status, error_message,
-                     progression_type, tone, difficulty, starting_level, campaign_length, 
-                     additional_notes, metadata, created_at, updated_at
-            "#,
-        )
-        .bind(req.name)
-        .bind(req.setting)
-        .bind(&req.themes)
-        .bind(req.player_characters.unwrap_or(serde_json::json!([])))
-        .bind(req.progression_type.unwrap_or("milestone".to_string()))
-        .bind(req.tone.unwrap_or("balanced".to_string()))
-        .bind(req.difficulty.unwrap_or("medium".to_string()))
-        .bind(req.starting_level.unwrap_or(1))
-        .bind(req.campaign_length.unwrap_or("medium".to_string()))
-        .bind(req.additional_notes)
-        .bind(metadata)
-        .fetch_one(&self.pool)
-        .await?;
+        let campaign_object = json!({
+            "name": req.name,
+            "setting": req.setting,
+            "themes": req.themes,
+            "player_characters": req.player_characters.unwrap_or(serde_json::json!([])),
+            "progression_type": req.progression_type.unwrap_or("milestone".to_string()),
+            "tone": req.tone.unwrap_or("balanced".to_string()),
+            "difficulty": req.difficulty.unwrap_or("medium".to_string()),
+            "starting_level": req.starting_level.unwrap_or(1),
+            "campaign_length": req.campaign_length.unwrap_or("medium".to_string()),
+            "additional_notes": req.additional_notes,
+            "metadata": metadata,
+            "status": "created",
+            "phase_progress": 0,
+            "total_phases": 9
+        });
+
+        let result = self.graphql_client.insert_one("campaigns", campaign_object).await?;
+        
+        // Convert GraphQL result to Campaign model
+        let campaign: Campaign = serde_json::from_value(result)
+            .map_err(|e| ApiError::BadRequest(format!("Failed to parse campaign: {}", e)))?;
 
         Ok(campaign)
     }
 
     pub async fn get_campaign(&self, id: i32) -> ApiResult<Campaign> {
-        let campaign = sqlx::query_as::<_, Campaign>(
+        let query = format!(
             r#"
-            SELECT id, name, setting, themes, player_characters, status, 
-                   generation_phase, phase_progress, total_phases, current_phase_status, error_message,
-                   progression_type, tone, difficulty, starting_level, campaign_length, 
-                   additional_notes, metadata, created_at, updated_at
-            FROM campaigns
-            WHERE id = $1
-            "#,
-        )
-        .bind(id)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => ApiError::NotFound,
-            _ => ApiError::Database(e),
-        })?;
+            query GetCampaign($id: Int!) {{
+                campaigns_by_pk(id: $id) {{
+                    id
+                    name
+                    setting
+                    themes
+                    player_characters
+                    status
+                    generation_phase
+                    phase_progress
+                    total_phases
+                    current_phase_status
+                    error_message
+                    progression_type
+                    tone
+                    difficulty
+                    starting_level
+                    campaign_length
+                    additional_notes
+                    metadata
+                    created_at
+                    updated_at
+                }}
+            }}
+            "#
+        );
+
+        let variables = json!({
+            "id": id
+        });
+
+        let result = self.graphql_client.execute(&query, Some(variables)).await?;
+        
+        let campaign_data = result
+            .get("campaigns_by_pk")
+            .ok_or_else(|| ApiError::NotFound)?;
+
+        if campaign_data.is_null() {
+            return Err(ApiError::NotFound);
+        }
+
+        let campaign: Campaign = serde_json::from_value(campaign_data.clone())
+            .map_err(|e| ApiError::BadRequest(format!("Failed to parse campaign: {}", e)))?;
 
         Ok(campaign)
     }
 
     pub async fn list_campaigns(&self) -> ApiResult<Vec<Campaign>> {
-        let campaigns = sqlx::query_as::<_, Campaign>(
-            r#"
-            SELECT id, name, setting, themes, player_characters, status, 
-                   generation_phase, phase_progress, total_phases, current_phase_status, error_message,
-                   progression_type, tone, difficulty, starting_level, campaign_length, 
-                   additional_notes, metadata, created_at, updated_at
-            FROM campaigns
-            ORDER BY created_at DESC
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let query = r#"
+            query ListCampaigns {
+                campaigns(order_by: {created_at: desc}) {
+                    id
+                    name
+                    setting
+                    themes
+                    player_characters
+                    status
+                    generation_phase
+                    phase_progress
+                    total_phases
+                    current_phase_status
+                    error_message
+                    progression_type
+                    tone
+                    difficulty
+                    starting_level
+                    campaign_length
+                    additional_notes
+                    metadata
+                    created_at
+                    updated_at
+                }
+            }
+        "#;
+
+        let result = self.graphql_client.execute(query, None).await?;
+        
+        let campaigns_data = result
+            .get("campaigns")
+            .ok_or_else(|| ApiError::BadRequest("No campaigns data in response".to_string()))?;
+
+        let campaigns: Vec<Campaign> = serde_json::from_value(campaigns_data.clone())
+            .map_err(|e| ApiError::BadRequest(format!("Failed to parse campaigns: {}", e)))?;
 
         Ok(campaigns)
     }
 
     pub async fn update_campaign(&self, id: i32, req: UpdateCampaignRequest) -> ApiResult<Campaign> {
-        let campaign = sqlx::query_as::<_, Campaign>(
-            r#"
-            UPDATE campaigns 
-            SET 
-                name = COALESCE($2, name),
-                setting = COALESCE($3, setting),
-                themes = COALESCE($4, themes),
-                player_characters = COALESCE($5, player_characters),
-                status = COALESCE($6, status),
-                metadata = COALESCE($7, metadata),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1
-            RETURNING id, name, setting, themes, player_characters, status, 
-                     generation_phase, phase_progress, total_phases, current_phase_status, error_message,
-                     progression_type, tone, difficulty, starting_level, campaign_length, 
-                     additional_notes, metadata, created_at, updated_at
-            "#,
-        )
-        .bind(id)
-        .bind(req.name)
-        .bind(req.setting)
-        .bind(req.themes)
-        .bind(req.player_characters)
-        .bind(req.status)
-        .bind(req.metadata)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => ApiError::NotFound,
-            _ => ApiError::Database(e),
-        })?;
+        let mut set_object = json!({});
+        
+        if let Some(name) = req.name {
+            set_object["name"] = json!(name);
+        }
+        if let Some(setting) = req.setting {
+            set_object["setting"] = json!(setting);
+        }
+        if let Some(themes) = req.themes {
+            set_object["themes"] = json!(themes);
+        }
+        if let Some(player_characters) = req.player_characters {
+            set_object["player_characters"] = json!(player_characters);
+        }
+        if let Some(status) = req.status {
+            set_object["status"] = json!(status);
+        }
+        if let Some(metadata) = req.metadata {
+            set_object["metadata"] = json!(metadata);
+        }
+
+        let pk_columns = json!({
+            "id": id
+        });
+
+        let result = self.graphql_client.update_by_pk("campaigns", pk_columns, set_object).await?;
+        
+        if result.is_null() {
+            return Err(ApiError::NotFound);
+        }
+
+        let campaign: Campaign = serde_json::from_value(result)
+            .map_err(|e| ApiError::BadRequest(format!("Failed to parse campaign: {}", e)))?;
 
         Ok(campaign)
     }
 
     pub async fn delete_campaign(&self, id: i32) -> ApiResult<()> {
-        let result = sqlx::query("DELETE FROM campaigns WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        let query = r#"
+            mutation DeleteCampaign($id: Int!) {
+                delete_campaigns_by_pk(id: $id) {
+                    id
+                }
+            }
+        "#;
 
-        if result.rows_affected() == 0 {
+        let variables = json!({
+            "id": id
+        });
+
+        let result = self.graphql_client.execute(query, Some(variables)).await?;
+        
+        let deleted_campaign = result
+            .get("delete_campaigns_by_pk")
+            .ok_or_else(|| ApiError::NotFound)?;
+
+        if deleted_campaign.is_null() {
             return Err(ApiError::NotFound);
         }
 
@@ -148,40 +210,116 @@ impl CampaignService {
     }
 
     pub async fn get_campaign_detail(&self, id: i32) -> ApiResult<CampaignDetail> {
-        // Get the campaign
-        let campaign = self.get_campaign(id).await?;
+        let query = r#"
+            query GetCampaignDetail($id: Int!) {
+                campaigns_by_pk(id: $id) {
+                    id
+                    name
+                    setting
+                    themes
+                    player_characters
+                    status
+                    generation_phase
+                    phase_progress
+                    total_phases
+                    current_phase_status
+                    error_message
+                    progression_type
+                    tone
+                    difficulty
+                    starting_level
+                    campaign_length
+                    additional_notes
+                    metadata
+                    created_at
+                    updated_at
+                    npcs(order_by: {created_at: asc}) {
+                        id
+                        campaign_id
+                        name
+                        role
+                        description
+                        personality
+                        stats
+                        secret_info
+                        created_at
+                        updated_at
+                    }
+                    locations(order_by: {created_at: asc}) {
+                        id
+                        campaign_id
+                        name
+                        location_type
+                        description
+                        properties
+                        created_at
+                        updated_at
+                    }
+                    quest_hooks(order_by: {created_at: asc}) {
+                        id
+                        campaign_id
+                        title
+                        description
+                        difficulty
+                        reward
+                        created_at
+                        updated_at
+                    }
+                    encounters(order_by: {created_at: asc}) {
+                        id
+                        campaign_id
+                        name
+                        description
+                        difficulty
+                        location_id
+                        created_at
+                        updated_at
+                    }
+                }
+            }
+        "#;
 
-        // Get related NPCs
-        let npcs = sqlx::query_as::<_, Npc>(
-            r#"
-            SELECT id, campaign_id, name, role, description, personality, stats, secret_info, created_at, updated_at
-            FROM npcs
-            WHERE campaign_id = $1
-            ORDER BY created_at
-            "#,
-        )
-        .bind(id)
-        .fetch_all(&self.pool)
-        .await?;
+        let variables = json!({
+            "id": id
+        });
 
-        // Get related locations
-        let locations = sqlx::query_as::<_, Location>(
-            r#"
-            SELECT id, campaign_id, name, type, description, connections, properties, created_at, updated_at
-            FROM locations
-            WHERE campaign_id = $1
-            ORDER BY created_at
-            "#,
-        )
-        .bind(id)
-        .fetch_all(&self.pool)
-        .await?;
+        let result = self.graphql_client.execute(query, Some(variables)).await?;
+        
+        let campaign_data = result
+            .get("campaigns_by_pk")
+            .ok_or_else(|| ApiError::NotFound)?;
 
-        // Get related quest hooks - TODO: Implement from enhanced schema
-        let quest_hooks = Vec::new();
+        if campaign_data.is_null() {
+            return Err(ApiError::NotFound);
+        }
 
-        // Get related encounters - TODO: Implement from enhanced schema  
-        let encounters = Vec::new();
+        // Extract campaign
+        let campaign: Campaign = serde_json::from_value(campaign_data.clone())
+            .map_err(|e| ApiError::BadRequest(format!("Failed to parse campaign: {}", e)))?;
+
+        // Extract NPCs
+        let npcs: Vec<Npc> = campaign_data
+            .get("npcs")
+            .map(|npcs_data| serde_json::from_value(npcs_data.clone()).unwrap_or_default())
+            .unwrap_or_default();
+
+        // Extract locations  
+        let locations: Vec<Location> = campaign_data
+            .get("locations")
+            .map(|locations_data| serde_json::from_value(locations_data.clone()).unwrap_or_default())
+            .unwrap_or_default();
+
+        // Extract quest hooks
+        let quest_hooks: Vec<QuestHook> = campaign_data
+            .get("quest_hooks")
+            .map(|quest_hooks_data| serde_json::from_value(quest_hooks_data.clone()).unwrap_or_default())
+            .unwrap_or_default();
+
+        // Extract encounters
+        let encounters: Vec<Encounter> = campaign_data
+            .get("encounters")
+            .map(|encounters_data| serde_json::from_value(encounters_data.clone()).unwrap_or_default())
+            .unwrap_or_default();
 
         Ok(CampaignDetail {
             campaign,

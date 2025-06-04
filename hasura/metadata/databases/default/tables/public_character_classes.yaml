@@ -1,24 +1,27 @@
 table:
-  name: quest_hooks
+  name: character_classes
   schema: public
 object_relationships:
   - name: campaign
     using:
       foreign_key_constraint_on: campaign_id
+  - name: parent_class
+    using:
+      foreign_key_constraint_on: parent_class_id
 array_relationships:
-  - name: quest_entities
+  - name: subclasses
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: parent_class_id
         table:
-          name: quest_entities
+          name: character_classes
           schema: public
-  - name: quest_locations
+  - name: entities
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: class_id
         table:
-          name: quest_locations
+          name: entities
           schema: public
 select_permissions:
   - role: public

@@ -1,24 +1,38 @@
 table:
-  name: quest_hooks
+  name: items
   schema: public
 object_relationships:
   - name: campaign
     using:
       foreign_key_constraint_on: campaign_id
 array_relationships:
-  - name: quest_entities
+  - name: item_effects
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: item_id
         table:
-          name: quest_entities
+          name: item_effects
           schema: public
-  - name: quest_locations
+  - name: sentient_properties
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: item_id
         table:
-          name: quest_locations
+          name: sentient_item_properties
+          schema: public
+  - name: entity_items
+    using:
+      foreign_key_constraint_on:
+        column: item_id
+        table:
+          name: entity_items
+          schema: public
+  - name: location_items
+    using:
+      foreign_key_constraint_on:
+        column: item_id
+        table:
+          name: location_items
           schema: public
 select_permissions:
   - role: public

@@ -1,24 +1,31 @@
 table:
-  name: quest_hooks
+  name: factions
   schema: public
 object_relationships:
   - name: campaign
     using:
       foreign_key_constraint_on: campaign_id
 array_relationships:
-  - name: quest_entities
+  - name: entity_factions
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: faction_id
         table:
-          name: quest_entities
+          name: entity_factions
           schema: public
-  - name: quest_locations
+  - name: faction_relationships_as_faction1
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: faction1_id
         table:
-          name: quest_locations
+          name: faction_relationships
+          schema: public
+  - name: faction_relationships_as_faction2
+    using:
+      foreign_key_constraint_on:
+        column: faction2_id
+        table:
+          name: faction_relationships
           schema: public
 select_permissions:
   - role: public

@@ -21,7 +21,10 @@
       "Bash(ls:*)",
       "Bash(grep:*)",
       "Bash(chmod:*)",
-      "Bash(/home/crohnos/dnd-generator/track_tables.sh)"
+      "Bash(/home/crohnos/dnd-generator/track_tables.sh)",
+      "Bash(HASURA_ADMIN_SECRET=dev-secret cargo run --bin test_hasura_schema)",
+      "Bash(HASURA_ADMIN_SECRET=myadminsecretkey cargo run --bin test_hasura_schema)",
+      "Bash(rg:*)"
     ],
     "deny": []
   },

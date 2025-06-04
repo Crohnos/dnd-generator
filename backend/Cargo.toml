@@ -3,6 +3,14 @@ name = "dnd-campaign-generator"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "generate_hasura_metadata"
+path = "src/bin/generate_hasura_metadata.rs"
+
+[[bin]]
+name = "test_hasura_schema"
+path = "src/bin/test_hasura_schema.rs"
+
 [dependencies]
 tokio = { version = "1.40", features = ["full"] }
 axum = { version = "0.7", features = ["json"] }

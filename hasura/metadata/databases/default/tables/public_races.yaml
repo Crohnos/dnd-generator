@@ -1,24 +1,34 @@
 table:
-  name: quest_hooks
+  name: races
   schema: public
 object_relationships:
   - name: campaign
     using:
       foreign_key_constraint_on: campaign_id
+  - name: parent_race
+    using:
+      foreign_key_constraint_on: parent_race_id
 array_relationships:
-  - name: quest_entities
+  - name: subraces
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: parent_race_id
         table:
-          name: quest_entities
+          name: races
           schema: public
-  - name: quest_locations
+  - name: entities
     using:
       foreign_key_constraint_on:
-        column: quest_hook_id
+        column: race_id
         table:
-          name: quest_locations
+          name: entities
+          schema: public
+  - name: race_cultures
+    using:
+      foreign_key_constraint_on:
+        column: race_id
+        table:
+          name: race_cultures
           schema: public
 select_permissions:
   - role: public

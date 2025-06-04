@@ -27,13 +27,13 @@ impl AppState {
         let anthropic_client = Arc::new(AnthropicClient::new(config.anthropic_api_key.clone()));
         let generation_service = Arc::new(GenerationServiceEnhanced::new(
             database_service_enhanced.clone(),
-            graphql_client,
+            graphql_client.clone(),
             anthropic_client,
             schema_generator.clone(),
         ));
         
         Ok(Self {
-            campaign_service: Arc::new(CampaignService::new(pool)),
+            campaign_service: Arc::new(CampaignService::new(graphql_client.clone())),
             database_service_enhanced,
             generation_service,
             schema_generator,

@@ -1,5 +1,5 @@
 use crate::error::{ApiError, ApiResult};
-use crate::models::Campaign;
+use crate::models::{Campaign, PhaseInfo, TOTAL_PHASES};
 use crate::services::{AnthropicClient, DatabaseServiceEnhanced, GraphQLClient, HasuraSchemaGenerator, Tool};
 use serde_json::{json, Value as JsonValue};
 use std::collections::HashMap;
@@ -33,36 +33,51 @@ impl GenerationServiceEnhanced {
     }
 
     pub async fn generate_campaign_content(&self, campaign_id: i32) -> ApiResult<()> {
-        info!("Starting enhanced 3-phase content generation for campaign {}", campaign_id);
+        info!("Starting enhanced 9-phase content generation for campaign {}", campaign_id);
 
-        // Define the 3 phases
-        let phases = vec![
+        // Get phase configuration from the campaign model
+        let phase_infos = PhaseInfo::get_all_phases();
+        let phases: Vec<GenerationPhase> = phase_infos.iter().map(|phase_info| {
             GenerationPhase {
-                name: "world_building".to_string(),
-                description: "Generate fundamental world details independent of PCs/NPCs/Locations".to_string(),
-                max_tokens: 8000,
-                temperature: 0.7,
-            },
-            GenerationPhase {
-                name: "pc_connected".to_string(),
-                description: "Generate content specifically connected to Player Characters".to_string(),
-                max_tokens: 10000,
-                temperature: 0.8,
-            },
-            GenerationPhase {
-                name: "world_population".to_string(),
-                description: "Generate remaining entities, connections, and relationships".to_string(),
-                max_tokens: 12000,
-                temperature: 0.9,
-            },
-        ];
+                name: phase_info.name.clone(),
+                description: phase_info.description.clone(),
+                max_tokens: match phase_info.name.as_str() {
+                    "phase_1a_core_world" => 8000,
+                    "phase_1b_character_building" => 6000,
+                    "phase_1c_social_framework" => 7000,
+                    "phase_2a_pc_entities" => 8000,
+                    "phase_2b_pc_locations" => 8000,
+                    "phase_2c_pc_items" => 6000,
+                    "phase_3a_quests_encounters" => 10000,
+                    "phase_3b_world_population" => 12000,
+                    "phase_3c_relationships" => 8000,
+                    _ => 8000,
+                },
+                temperature: if phase_info.name.starts_with("phase_1") { 0.7 } 
+                            else if phase_info.name.starts_with("phase_2") { 0.8 }
+                            else { 0.9 },
+            }
+        }).collect();
 
         // Initialize phase tracking
-        self.database.initialize_generation_phases(campaign_id, phases.len() as i32).await?;
+        self.database.initialize_generation_phases(campaign_id, TOTAL_PHASES).await?;
 
-        // Execute each phase
+        // Track completed phases for dependency validation
+        let mut completed_phases: Vec<String> = Vec::new();
+
+        // Execute each phase with dependency validation
         for (phase_number, phase) in phases.iter().enumerate() {
             info!("Starting Phase {}: {}", phase_number + 1, phase.name);
+            
+            // Validate dependencies before executing phase
+            if let Err(e) = PhaseInfo::validate_dependencies(&completed_phases, &phase.name) {
+                error!("Phase dependency validation failed: {}", e);
+                self.database.update_campaign_status_with_error(
+                    campaign_id,
+                    &format!("Dependency validation failed for phase {}: {}", phase_number + 1, e),
+                ).await?;
+                return Err(ApiError::BadRequest(e));
+            }
             
             match self.execute_phase(campaign_id, phase, phase_number as i32 + 1).await {
                 Ok(_) => {
@@ -72,6 +87,7 @@ impl GenerationServiceEnhanced {
                         ((phase_number + 1) * 100 / phases.len()) as i32,
                         Some("completed"),
                     ).await?;
+                    completed_phases.push(phase.name.clone());
                     info!("Completed Phase {}: {}", phase_number + 1, phase.name);
                 }
                 Err(e) => {
@@ -88,32 +104,338 @@ impl GenerationServiceEnhanced {
         // Mark campaign as ready
         self.database.update_generation_phase(campaign_id, "completed", 100, Some("all_phases_complete")).await?;
         self.database.update_campaign_status_completed(campaign_id).await?;
-        info!("Successfully completed all 3 phases for campaign {}", campaign_id);
+        info!("Successfully completed all 9 phases for campaign {}", campaign_id);
 
         Ok(())
     }
 
     async fn execute_phase(&self, campaign_id: i32, phase: &GenerationPhase, phase_number: i32) -> ApiResult<()> {
         match phase.name.as_str() {
-            "world_building" => self.execute_world_building_phase(campaign_id, phase, phase_number).await,
-            "pc_connected" => self.execute_pc_connected_phase(campaign_id, phase, phase_number).await,
-            "world_population" => self.execute_world_population_phase(campaign_id, phase, phase_number).await,
-            _ => Err(ApiError::BadRequest("Unknown phase".to_string())),
+            "phase_1a_core_world" => self.execute_phase_1a_core_world(campaign_id, phase, phase_number).await,
+            "phase_1b_character_building" => self.execute_phase_1b_character_building(campaign_id, phase, phase_number).await,
+            "phase_1c_social_framework" => self.execute_phase_1c_social_framework(campaign_id, phase, phase_number).await,
+            "phase_2a_pc_entities" => self.execute_phase_2a_pc_entities(campaign_id, phase, phase_number).await,
+            "phase_2b_pc_locations" => self.execute_phase_2b_pc_locations(campaign_id, phase, phase_number).await,
+            "phase_2c_pc_items" => self.execute_phase_2c_pc_items(campaign_id, phase, phase_number).await,
+            "phase_3a_quests_encounters" => self.execute_phase_3a_quests_encounters(campaign_id, phase, phase_number).await,
+            "phase_3b_world_population" => self.execute_phase_3b_world_population(campaign_id, phase, phase_number).await,
+            "phase_3c_relationships" => self.execute_phase_3c_relationships(campaign_id, phase, phase_number).await,
+            _ => Err(ApiError::BadRequest(format!("Unknown phase: {}", phase.name))),
         }
     }
 
-    // Phase 1: World Building (Independent of PCs/NPCs/Locations)
-    async fn execute_world_building_phase(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
-        info!("Executing World Building Phase for campaign {}", campaign_id);
+    // Phase 1A: Core World Systems
+    async fn execute_phase_1a_core_world(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 1A: Core World Systems for campaign {}", campaign_id);
 
-        // Generate world building prompt and tool
-        let (prompt, tool) = self.build_world_building_prompt_with_tool(campaign_id).await?;
+        // Get campaign details for context
+        let campaign = self.database.get_campaign(campaign_id).await?;
         
-        // Call AI with tool to generate world building content
+        // Build prompt with campaign context
+        let prompt = format!(
+            "You are creating core world systems for the D&D 5e campaign: '{}'\n\n\
+            Setting: {}\n\
+            Themes: {}\n\
+            Tone: {}\n\
+            Campaign Length: {}\n\n\
+            {}\n\n\
+            Generate comprehensive foundational world systems that are independent of player characters.\n\
+            Focus on creating: calendar systems, planes of existence, geography, historical periods, \
+            economic systems, legal frameworks, and celestial bodies.\n\n\
+            Use the provided tool to structure your response with all required data.",
+            campaign.name,
+            campaign.setting.as_deref().unwrap_or("Fantasy world"),
+            campaign.themes.join(", "),
+            campaign.tone,
+            campaign.campaign_length,
+            campaign.additional_notes.as_deref().unwrap_or("")
+        );
+
+        // Get phase-specific tool schema from Hasura
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_1a_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 1A schemas".to_string()))?;
+
+        // Call AI with tool to generate content
         let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
         
-        // Save world building content
-        self.save_world_building_content(campaign_id, &response).await?;
+        // Save content using database service
+        self.save_phase_1a_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 1B: Character Building Systems
+    async fn execute_phase_1b_character_building(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 1B: Character Building Systems for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let phase_1a_context = self.database.get_phase_1a_context(campaign_id).await?;
+        
+        let prompt = format!(
+            "You are creating character building systems for the D&D 5e campaign: '{}'\n\n\
+            Setting: {}\n\
+            Themes: {}\n\
+            Tone: {}\n\n\
+            World Context from Phase 1A:\n\
+            {}\n\n\
+            Generate character creation systems including races, classes, feats, and backgrounds \
+            that fit the established world. Ensure racial origins tie to the geography and \
+            cultural elements align with the world's tone and themes.\n\n\
+            Use the provided tool to structure your response.",
+            campaign.name,
+            campaign.setting.as_deref().unwrap_or("Fantasy world"),
+            campaign.themes.join(", "),
+            campaign.tone,
+            serde_json::to_string_pretty(&phase_1a_context).unwrap_or_default()
+        );
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_1b_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 1B schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_1b_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 1C: Social Framework
+    async fn execute_phase_1c_social_framework(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 1C: Social Framework for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let phase_1_context = self.database.get_phase_1_context(campaign_id).await?;
+        
+        let prompt = format!(
+            "You are creating social framework for the D&D 5e campaign: '{}'\n\n\
+            Setting: {}\n\
+            Themes: {}\n\
+            Tone: {}\n\n\
+            Established World Systems:\n\
+            {}\n\n\
+            Generate social and religious systems including languages, cultures, factions, \
+            pantheons, and deities. Build on the established geography, races, and world history. \
+            Create interconnected social systems that reflect the campaign's themes.\n\n\
+            Use the provided tool to structure your response.",
+            campaign.name,
+            campaign.setting.as_deref().unwrap_or("Fantasy world"),
+            campaign.themes.join(", "),
+            campaign.tone,
+            serde_json::to_string_pretty(&phase_1_context).unwrap_or_default()
+        );
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_1c_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 1C schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_1c_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 2A: PC-Connected Entities
+    async fn execute_phase_2a_pc_entities(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 2A: PC-Connected Entities for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let world_context = self.database.get_phase_1_context(campaign_id).await?;
+        
+        let mut prompt = format!(
+            "You are creating PC-connected entities for the D&D 5e campaign: '{}'\n\n\
+            Setting: {}\n\
+            Themes: {}\n\
+            Tone: {}\n\n\
+            Player Characters:\n",
+            campaign.name,
+            campaign.setting.as_deref().unwrap_or("Fantasy world"),
+            campaign.themes.join(", "),
+            campaign.tone
+        );
+
+        // Add PC details
+        if let Some(pcs) = campaign.player_characters.as_array() {
+            for pc in pcs {
+                prompt.push_str(&format!(
+                    "- {} ({} {}, Level {}): {}\n",
+                    pc.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown"),
+                    pc.get("race").and_then(|v| v.as_str()).unwrap_or("Unknown"),
+                    pc.get("class").and_then(|v| v.as_str()).unwrap_or("Unknown"),
+                    pc.get("level").and_then(|v| v.as_i64()).unwrap_or(1),
+                    pc.get("backstory").and_then(|v| v.as_str()).unwrap_or("No backstory")
+                ));
+            }
+        }
+
+        prompt.push_str(&format!(
+            "\n\nEstablished World Context:\n\
+            {}\n\n\
+            Generate NPCs and entities that have direct connections to the player character backstories. \
+            Each entity should have clear relationships to specific PCs based on their backgrounds, \
+            motivations, and story hooks. Focus on family members, mentors, rivals, allies, and \
+            significant figures from their past.\n\n\
+            Use the provided tool to structure your response.",
+            serde_json::to_string_pretty(&world_context).unwrap_or_default()
+        ));
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_2a_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 2A schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_2a_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 2B: PC-Connected Locations
+    async fn execute_phase_2b_pc_locations(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 2B: PC-Connected Locations for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let phase_context = self.database.get_phase_2_context(campaign_id).await?;
+        
+        let prompt = format!(
+            "You are creating PC-connected locations for the D&D 5e campaign: '{}'\n\n\
+            Established Context:\n\
+            {}\n\n\
+            Generate locations that are directly tied to PC backstories and the entities created in Phase 2A. \
+            Create hierarchical locations (cities → districts → buildings) that serve as homes, origins, \
+            training grounds, and significant places from PC histories. Each location should have clear \
+            connections to specific player characters.\n\n\
+            Use the provided tool to structure your response.",
+            campaign.name,
+            serde_json::to_string_pretty(&phase_context).unwrap_or_default()
+        );
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_2b_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 2B schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_2b_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 2C: PC-Connected Items
+    async fn execute_phase_2c_pc_items(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 2C: PC-Connected Items for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let phase_context = self.database.get_phase_2_context(campaign_id).await?;
+        
+        let prompt = format!(
+            "You are creating PC-connected items for the D&D 5e campaign: '{}'\n\n\
+            Established Context:\n\
+            {}\n\n\
+            Generate equipment, artifacts, and magical items that are relevant to PC stories and \
+            connected to the entities and locations from previous phases. Create items with personal \
+            significance: family heirlooms, training weapons, artifacts from mentors, quest items, \
+            and tools that tie into PC backstories and future plot development.\n\n\
+            Use the provided tool to structure your response.",
+            campaign.name,
+            serde_json::to_string_pretty(&phase_context).unwrap_or_default()
+        );
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_2c_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 2C schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_2c_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 3A: Quest Hooks & Encounters
+    async fn execute_phase_3a_quests_encounters(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 3A: Quest Hooks & Encounters for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let all_context = self.database.get_phase_3_context(campaign_id).await?;
+        
+        let prompt = format!(
+            "You are creating quest hooks and encounters for the D&D 5e campaign: '{}'\n\n\
+            Complete Context from Previous Phases:\n\
+            {}\n\n\
+            Generate adventure hooks, missions, and encounters that build on all the established content. \
+            Create quests that involve the PC-connected entities, utilize the established locations, \
+            and incorporate the world systems. Design encounters that challenge the party and advance \
+            the overall campaign narrative while respecting the tone and themes.\n\n\
+            Use the provided tool to structure your response.",
+            campaign.name,
+            serde_json::to_string_pretty(&all_context).unwrap_or_default()
+        );
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_3a_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 3A schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_3a_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 3B: World Population
+    async fn execute_phase_3b_world_population(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 3B: World Population for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let all_context = self.database.get_phase_3_context(campaign_id).await?;
+        
+        let prompt = format!(
+            "You are populating the world for the D&D 5e campaign: '{}'\n\n\
+            Established Context:\n\
+            {}\n\n\
+            Generate additional world population to flesh out the established locations. Create shops, \
+            taverns, temples, and other businesses that make the world feel alive. Populate locations \
+            with additional NPCs, services, and points of interest that support the established narrative \
+            and provide resources for the party's adventures.\n\n\
+            Use the provided tool to structure your response.",
+            campaign.name,
+            serde_json::to_string_pretty(&all_context).unwrap_or_default()
+        );
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_3b_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 3B schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_3b_content(campaign_id, &response).await?;
+
+        Ok(())
+    }
+
+    // Phase 3C: Final Relationships
+    async fn execute_phase_3c_relationships(&self, campaign_id: i32, phase: &GenerationPhase, _phase_number: i32) -> ApiResult<()> {
+        info!("Executing Phase 3C: Final Relationships for campaign {}", campaign_id);
+
+        let campaign = self.database.get_campaign(campaign_id).await?;
+        let all_context = self.database.get_phase_3_context(campaign_id).await?;
+        
+        let prompt = format!(
+            "You are creating final relationships for the D&D 5e campaign: '{}'\n\n\
+            Complete Campaign Context:\n\
+            {}\n\n\
+            Generate the final relationship network that connects all entities, locations, factions, \
+            and items created in previous phases. Create entity-to-entity relationships, establish \
+            faction alliances and rivalries, connect entities to their home locations, assign item \
+            ownership, and create the social web that makes the campaign world feel interconnected \
+            and alive.\n\n\
+            Use the provided tool to structure your response.",
+            campaign.name,
+            serde_json::to_string_pretty(&all_context).unwrap_or_default()
+        );
+
+        let schema_gen = self.schema_generator.read().await;
+        let tool = schema_gen.get_phase_3c_schemas()
+            .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 3C schemas".to_string()))?;
+
+        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        self.save_phase_3c_content(campaign_id, &response).await?;
 
         Ok(())
     }
@@ -1607,6 +1929,88 @@ impl GenerationServiceEnhanced {
         };
         
         Ok((prompt, tool))
+    }
+
+    // Phase-specific save methods using GraphQL/Hasura mutations
+    async fn save_phase_1a_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 1A content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_1a_data(campaign_id, content).await?;
+        info!("Saved Phase 1A entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_1b_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 1B content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_1b_data(campaign_id, content).await?;
+        info!("Saved Phase 1B entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_1c_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 1C content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_1c_data(campaign_id, content).await?;
+        info!("Saved Phase 1C entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_2a_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 2A content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_2a_data(campaign_id, content).await?;
+        info!("Saved Phase 2A entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_2b_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 2B content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_2b_data(campaign_id, content).await?;
+        info!("Saved Phase 2B entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_2c_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 2C content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_2c_data(campaign_id, content).await?;
+        info!("Saved Phase 2C entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_3a_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 3A content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_3a_data(campaign_id, content).await?;
+        info!("Saved Phase 3A entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_3b_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 3B content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_3b_data(campaign_id, content).await?;
+        info!("Saved Phase 3B entities: {:?}", saved_entities);
+        
+        Ok(())
+    }
+
+    async fn save_phase_3c_content(&self, campaign_id: i32, content: &JsonValue) -> ApiResult<()> {
+        info!("Saving Phase 3C content for campaign {}", campaign_id);
+        
+        let saved_entities = self.graphql.save_phase_3c_data(campaign_id, content).await?;
+        info!("Saved Phase 3C entities: {:?}", saved_entities);
+        
+        Ok(())
     }
 
     // New GraphQL-based save method for world population content

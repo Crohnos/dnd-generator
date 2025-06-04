@@ -253,6 +253,126 @@ impl HasuraSchemaGenerator {
         self.table_schemas.keys().cloned().collect()
     }
 
+    // Phase-specific schema methods for 9-phase system
+    pub fn get_phase_1a_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("calendar_systems", "Calendar systems used in the world"),
+            ("planes", "Planes of existence"),
+            ("geography_regions", "Geographic regions and terrain"),
+            ("historical_periods", "Major historical eras"),
+            ("economic_systems", "Economic and trade systems"),
+            ("legal_systems", "Legal and governmental systems"),
+            ("celestial_bodies", "Celestial bodies and astronomy"),
+        ];
+        self.create_phase_tool("generate_phase_1a", "Generate core world systems", table_configs)
+    }
+
+    pub fn get_phase_1b_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("races", "Playable races available in the world"),
+            ("character_classes", "Available character classes"),
+            ("feats", "Special feats and abilities"),
+            ("backgrounds", "Character backgrounds and origins"),
+        ];
+        self.create_phase_tool("generate_phase_1b", "Generate character building systems", table_configs)
+    }
+
+    pub fn get_phase_1c_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("languages", "Languages spoken in the world"),
+            ("cultures", "Cultural groups and societies"),
+            ("factions", "Organizations and political groups"),
+            ("pantheons", "Divine pantheons and religious systems"),
+            ("deities", "Individual gods and goddesses"),
+        ];
+        self.create_phase_tool("generate_phase_1c", "Generate social framework", table_configs)
+    }
+
+    pub fn get_phase_2a_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("entities", "NPCs and entities connected to PC backstories"),
+        ];
+        self.create_phase_tool("generate_phase_2a", "Generate PC-connected entities", table_configs)
+    }
+
+    pub fn get_phase_2b_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("locations", "Locations tied to PC backstories"),
+            ("dungeons", "Dungeons and adventure sites"),
+            ("buildings", "Specific buildings and structures"),
+        ];
+        self.create_phase_tool("generate_phase_2b", "Generate PC-connected locations", table_configs)
+    }
+
+    pub fn get_phase_2c_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("items", "Equipment and artifacts for PCs"),
+            ("item_effects", "Magical effects and properties"),
+            ("sentient_item_properties", "Properties of sentient items"),
+        ];
+        self.create_phase_tool("generate_phase_2c", "Generate PC-connected items", table_configs)
+    }
+
+    pub fn get_phase_3a_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("quest_hooks", "Adventure hooks and missions"),
+            ("encounters", "Combat encounters and challenges"),
+        ];
+        self.create_phase_tool("generate_phase_3a", "Generate quests and encounters", table_configs)
+    }
+
+    pub fn get_phase_3b_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("shops", "Shops and merchants"),
+            ("taverns", "Taverns and inns"),
+            ("temples", "Religious buildings and shrines"),
+        ];
+        self.create_phase_tool("generate_phase_3b", "Generate world population", table_configs)
+    }
+
+    pub fn get_phase_3c_schemas(&self) -> Option<crate::services::Tool> {
+        let table_configs = vec![
+            ("entity_relationships", "Relationships between entities"),
+            ("entity_locations", "Connections between entities and locations"),
+            ("entity_factions", "Entity memberships in factions"),
+            ("faction_relationships", "Relationships between factions"),
+            ("entity_items", "Items owned by entities"),
+            ("location_items", "Items found in locations"),
+        ];
+        self.create_phase_tool("generate_phase_3c", "Generate final relationships", table_configs)
+    }
+
+    fn create_phase_tool(&self, tool_name: &str, description: &str, table_configs: Vec<(&str, &str)>) -> Option<crate::services::Tool> {
+        let mut properties = Map::new();
+        let mut required = Vec::new();
+
+        for (table_name, table_description) in table_configs {
+            if let Some(table_schema) = self.get_table_schema(table_name) {
+                properties.insert(table_name.to_string(), json!({
+                    "type": "array",
+                    "description": table_description,
+                    "items": table_schema
+                }));
+                required.push(table_name.to_string());
+            }
+        }
+
+        if properties.is_empty() {
+            warn!("No table schemas available for phase tool: {}", tool_name);
+            return None;
+        }
+
+        Some(crate::services::Tool {
+            name: tool_name.to_string(),
+            description: description.to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": properties,
+                "required": required
+            })
+        })
+    }
+
     pub fn create_campaign_content_tool(&self) -> Option<crate::services::Tool> {
         // Create a comprehensive tool schema that includes multiple tables
         let mut properties = Map::new();

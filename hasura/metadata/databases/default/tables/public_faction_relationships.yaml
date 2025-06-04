@@ -1,13 +1,13 @@
 table:
-  name: encounters
+  name: faction_relationships
   schema: public
 object_relationships:
-  - name: campaign
+  - name: faction1
     using:
-      foreign_key_constraint_on: campaign_id
-  - name: location
+      foreign_key_constraint_on: faction1_id
+  - name: faction2
     using:
-      foreign_key_constraint_on: location_id
+      foreign_key_constraint_on: faction2_id
 select_permissions:
   - role: public
     permission:

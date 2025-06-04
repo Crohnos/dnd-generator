@@ -1,10 +1,10 @@
 table:
-  name: encounters
+  name: quest_locations
   schema: public
 object_relationships:
-  - name: campaign
+  - name: quest_hook
     using:
-      foreign_key_constraint_on: campaign_id
+      foreign_key_constraint_on: quest_hook_id
   - name: location
     using:
       foreign_key_constraint_on: location_id

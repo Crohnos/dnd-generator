@@ -19,9 +19,40 @@ const nextConfig = {
     NEXT_PUBLIC_HASURA_ADMIN_SECRET: process.env.NEXT_PUBLIC_HASURA_ADMIN_SECRET,
   },
   // Performance optimizations
-  // experimental: {
-  //   optimizeCss: true, // Disabled due to critters dependency issue
-  // },
+  experimental: {
+    // Memory optimizations
+    workerThreads: false,
+    cpus: 1,
+  },
+  // Webpack memory optimizations
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Reduce memory usage in development
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          default: false,
+          vendors: false,
+          vendor: {
+            chunks: 'all',
+            test: /node_modules/,
+            name: 'vendor',
+            enforce: true,
+          },
+        },
+      };
+      
+      // Limit parallel processing
+      config.parallelism = 1;
+      
+      // Reduce watch options
+      config.watchOptions = {
+        ignored: /node_modules/,
+        poll: 3000,
+      };
+    }
+    return config;
+  },
 }
 
 module.exports = nextConfig

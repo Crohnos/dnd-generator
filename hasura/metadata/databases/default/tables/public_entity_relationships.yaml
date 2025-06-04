@@ -1,13 +1,13 @@
 table:
-  name: encounters
+  name: entity_relationships
   schema: public
 object_relationships:
-  - name: campaign
+  - name: entity1
     using:
-      foreign_key_constraint_on: campaign_id
-  - name: location
+      foreign_key_constraint_on: entity1_id
+  - name: entity2
     using:
-      foreign_key_constraint_on: location_id
+      foreign_key_constraint_on: entity2_id
 select_permissions:
   - role: public
     permission:
