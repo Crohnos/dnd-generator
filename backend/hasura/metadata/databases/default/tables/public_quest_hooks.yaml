@@ -1,0 +1,38 @@
+table:
+  name: quest_hooks
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+array_relationships:
+  - name: quest_entities
+    using:
+      foreign_key_constraint_on:
+        column: quest_hook_id
+        table:
+          name: quest_entities
+          schema: public
+  - name: quest_locations
+    using:
+      foreign_key_constraint_on:
+        column: quest_hook_id
+        table:
+          name: quest_locations
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

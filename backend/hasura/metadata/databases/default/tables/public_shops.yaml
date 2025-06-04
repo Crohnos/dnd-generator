@@ -1,0 +1,26 @@
+table:
+  name: shops
+  schema: public
+object_relationships:
+  - name: building
+    using:
+      foreign_key_constraint_on: building_id
+  - name: owner
+    using:
+      foreign_key_constraint_on: owner_entity_id
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

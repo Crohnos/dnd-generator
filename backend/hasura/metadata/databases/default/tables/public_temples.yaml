@@ -1,0 +1,29 @@
+table:
+  name: temples
+  schema: public
+object_relationships:
+  - name: building
+    using:
+      foreign_key_constraint_on: building_id
+  - name: deity
+    using:
+      foreign_key_constraint_on: deity_id
+  - name: high_priest
+    using:
+      foreign_key_constraint_on: high_priest_entity_id
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

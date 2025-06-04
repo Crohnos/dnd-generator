@@ -1,0 +1,45 @@
+table:
+  name: buildings
+  schema: public
+object_relationships:
+  - name: location
+    using:
+      foreign_key_constraint_on: location_id
+array_relationships:
+  - name: shops
+    using:
+      foreign_key_constraint_on:
+        column: building_id
+        table:
+          name: shops
+          schema: public
+  - name: taverns
+    using:
+      foreign_key_constraint_on:
+        column: building_id
+        table:
+          name: taverns
+          schema: public
+  - name: temples
+    using:
+      foreign_key_constraint_on:
+        column: building_id
+        table:
+          name: temples
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

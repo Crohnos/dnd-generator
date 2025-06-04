@@ -1,0 +1,31 @@
+table:
+  name: planes
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+array_relationships:
+  - name: geography_regions
+    using:
+      foreign_key_constraint_on:
+        column: plane_id
+        table:
+          name: geography_regions
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

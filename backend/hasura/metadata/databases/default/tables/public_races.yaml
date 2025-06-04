@@ -1,0 +1,48 @@
+table:
+  name: races
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+  - name: parent_race
+    using:
+      foreign_key_constraint_on: parent_race_id
+array_relationships:
+  - name: subraces
+    using:
+      foreign_key_constraint_on:
+        column: parent_race_id
+        table:
+          name: races
+          schema: public
+  - name: entities
+    using:
+      foreign_key_constraint_on:
+        column: race_id
+        table:
+          name: entities
+          schema: public
+  - name: race_cultures
+    using:
+      foreign_key_constraint_on:
+        column: race_id
+        table:
+          name: race_cultures
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

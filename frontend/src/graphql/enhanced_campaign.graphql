@@ -1,0 +1,250 @@
+query GetEnhancedCampaign($id: Int!) {
+  campaigns_by_pk(id: $id) {
+    id
+    name
+    setting
+    themes
+    player_characters
+    status
+    generation_phase
+    phase_progress
+    total_phases
+    current_phase_status
+    error_message
+    progression_type
+    tone
+    difficulty
+    starting_level
+    campaign_length
+    additional_notes
+    metadata
+    created_at
+    updated_at
+  }
+}
+
+query GetWorldBuildingData($campaignId: Int!) {
+  calendar_systems(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    description
+    months
+    days_per_month
+    hours_per_day
+    minutes_per_hour
+    current_date
+    special_events
+    created_at
+  }
+  
+  world_history(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    era_name
+    start_year
+    end_year
+    description
+    major_events
+    created_at
+  }
+  
+  planes(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    type
+    description
+    properties
+    access_methods
+    created_at
+  }
+  
+  pantheons(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    description
+    alignment
+    domains
+    created_at
+  }
+  
+  deities(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    pantheon_id
+    name
+    alignment
+    domains
+    symbols
+    description
+    created_at
+  }
+  
+  geography_regions(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    type
+    description
+    climate
+    terrain_features
+    natural_resources
+    notable_settlements
+    created_at
+  }
+  
+  economic_systems(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    type
+    description
+    currency_types
+    trade_goods
+    taxation_method
+    wealth_distribution
+    created_at
+  }
+  
+  legal_systems(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    type
+    description
+    laws
+    enforcement_methods
+    court_system
+    punishment_types
+    created_at
+  }
+}
+
+query GetCharacterBuildingData($campaignId: Int!) {
+  races(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    description
+    traits
+    ability_modifiers
+    size
+    speed
+    languages
+    created_at
+  }
+  
+  subraces(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    race_id
+    name
+    description
+    traits
+    ability_modifiers
+    created_at
+  }
+  
+  classes(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    description
+    hit_die
+    primary_ability
+    saving_throws
+    proficiencies
+    starting_equipment
+    created_at
+  }
+  
+  subclasses(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    class_id
+    name
+    description
+    features
+    spell_casting
+    created_at
+  }
+  
+  languages(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    type
+    script
+    speakers
+    description
+    created_at
+  }
+}
+
+query GetEntitiesAndRelationships($campaignId: Int!) {
+  entities(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    entity_type
+    subtype
+    description
+    stats
+    abilities
+    equipment
+    notes
+    is_alive
+    created_at
+  }
+  
+  entity_relationships(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    entity1_id
+    entity2_id
+    relationship_type
+    description
+    strength
+    created_at
+  }
+  
+  factions(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    name
+    type
+    description
+    goals
+    values
+    resources
+    territories
+    leadership_structure
+    created_at
+  }
+  
+  faction_relationships(where: { campaign_id: { _eq: $campaignId } }) {
+    id
+    campaign_id
+    faction1_id
+    faction2_id
+    relationship_type
+    description
+    tension_level
+    created_at
+  }
+}
+
+subscription CampaignGenerationStatus($campaignId: Int!) {
+  campaigns_by_pk(id: $campaignId) {
+    id
+    status
+    generation_phase
+    phase_progress
+    total_phases
+    current_phase_status
+    error_message
+    updated_at
+  }
+}

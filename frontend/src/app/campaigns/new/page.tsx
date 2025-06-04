@@ -1,6 +1,6 @@
 'use client';
 
-import { CampaignWizard } from '@/components/CampaignWizard';
+import { CampaignWizardEnhanced } from '@/components/CampaignWizardEnhanced';
 
 export default function NewCampaignPage() {
   return (
@@ -9,11 +9,11 @@ export default function NewCampaignPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-4">Create New Campaign</h1>
           <p className="text-gray-400">
-            Follow the steps below to generate your AI-powered D&D campaign
+            Follow the steps below to generate your AI-powered D&D campaign with enhanced world building
           </p>
         </div>
         
-        <CampaignWizard />
+        <CampaignWizardEnhanced />
       </div>
     </div>
   );

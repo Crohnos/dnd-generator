@@ -1,0 +1,79 @@
+table:
+  name: locations
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+  - name: parent_location
+    using:
+      foreign_key_constraint_on: parent_location_id
+  - name: geography_region
+    using:
+      foreign_key_constraint_on: geography_region_id
+array_relationships:
+  - name: child_locations
+    using:
+      foreign_key_constraint_on:
+        column: parent_location_id
+        table:
+          name: locations
+          schema: public
+  - name: entity_locations
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: entity_locations
+          schema: public
+  - name: location_items
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: location_items
+          schema: public
+  - name: encounters
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: encounters
+          schema: public
+  - name: quest_locations
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: quest_locations
+          schema: public
+  - name: dungeons
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: dungeons
+          schema: public
+  - name: buildings
+    using:
+      foreign_key_constraint_on:
+        column: location_id
+        table:
+          name: buildings
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

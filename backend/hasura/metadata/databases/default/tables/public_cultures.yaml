@@ -1,0 +1,37 @@
+table:
+  name: cultures
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+  - name: primary_race
+    using:
+      foreign_key_constraint_on: primary_race_id
+  - name: geography_region
+    using:
+      foreign_key_constraint_on: geography_region_id
+array_relationships:
+  - name: race_cultures
+    using:
+      foreign_key_constraint_on:
+        column: culture_id
+        table:
+          name: race_cultures
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

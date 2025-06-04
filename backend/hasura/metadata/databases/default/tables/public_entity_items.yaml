@@ -1,0 +1,26 @@
+table:
+  name: entity_items
+  schema: public
+object_relationships:
+  - name: entity
+    using:
+      foreign_key_constraint_on: entity_id
+  - name: item
+    using:
+      foreign_key_constraint_on: item_id
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

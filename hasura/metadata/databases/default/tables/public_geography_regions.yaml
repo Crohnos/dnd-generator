@@ -1,0 +1,65 @@
+table:
+  name: geography_regions
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+  - name: parent_region
+    using:
+      foreign_key_constraint_on: parent_region_id
+  - name: plane
+    using:
+      foreign_key_constraint_on: plane_id
+array_relationships:
+  - name: child_regions
+    using:
+      foreign_key_constraint_on:
+        column: parent_region_id
+        table:
+          name: geography_regions
+          schema: public
+  - name: locations
+    using:
+      foreign_key_constraint_on:
+        column: geography_region_id
+        table:
+          name: locations
+          schema: public
+  - name: economic_systems
+    using:
+      foreign_key_constraint_on:
+        column: region_id
+        table:
+          name: economic_systems
+          schema: public
+  - name: legal_systems
+    using:
+      foreign_key_constraint_on:
+        column: region_id
+        table:
+          name: legal_systems
+          schema: public
+  - name: cultures
+    using:
+      foreign_key_constraint_on:
+        column: geography_region_id
+        table:
+          name: cultures
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

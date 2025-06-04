@@ -12,18 +12,47 @@ impl CampaignService {
     }
 
     pub async fn create_campaign(&self, req: CreateCampaignRequest) -> ApiResult<Campaign> {
+        // Merge enhanced data into metadata
+        let mut metadata = req.metadata.unwrap_or(serde_json::json!({}));
+        
+        if let Some(world_building) = req.world_building {
+            metadata["world_building"] = serde_json::to_value(world_building).unwrap_or(serde_json::json!({}));
+        }
+        
+        if let Some(campaign_specifics) = req.campaign_specifics {
+            metadata["campaign_specifics"] = serde_json::to_value(campaign_specifics).unwrap_or(serde_json::json!({}));
+        }
+        
+        if let Some(generation_preferences) = req.generation_preferences {
+            metadata["generation_preferences"] = serde_json::to_value(generation_preferences).unwrap_or(serde_json::json!({}));
+        }
+
         let campaign = sqlx::query_as::<_, Campaign>(
             r#"
-            INSERT INTO campaigns (name, setting, themes, player_characters, metadata)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, name, setting, themes, player_characters, status, metadata, created_at, updated_at
+            INSERT INTO campaigns (
+                name, setting, themes, player_characters, 
+                progression_type, tone, difficulty, starting_level, 
+                campaign_length, additional_notes, metadata,
+                status, generation_phase, phase_progress, total_phases, current_phase_status
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'created', NULL, 0, 3, NULL)
+            RETURNING id, name, setting, themes, player_characters, status, 
+                     generation_phase, phase_progress, total_phases, current_phase_status, error_message,
+                     progression_type, tone, difficulty, starting_level, campaign_length, 
+                     additional_notes, metadata, created_at, updated_at
             "#,
         )
         .bind(req.name)
         .bind(req.setting)
         .bind(&req.themes)
         .bind(req.player_characters.unwrap_or(serde_json::json!([])))
-        .bind(req.metadata.unwrap_or(serde_json::json!({})))
+        .bind(req.progression_type.unwrap_or("milestone".to_string()))
+        .bind(req.tone.unwrap_or("balanced".to_string()))
+        .bind(req.difficulty.unwrap_or("medium".to_string()))
+        .bind(req.starting_level.unwrap_or(1))
+        .bind(req.campaign_length.unwrap_or("medium".to_string()))
+        .bind(req.additional_notes)
+        .bind(metadata)
         .fetch_one(&self.pool)
         .await?;
 
@@ -33,7 +62,10 @@ impl CampaignService {
     pub async fn get_campaign(&self, id: i32) -> ApiResult<Campaign> {
         let campaign = sqlx::query_as::<_, Campaign>(
             r#"
-            SELECT id, name, setting, themes, player_characters, status, metadata, created_at, updated_at
+            SELECT id, name, setting, themes, player_characters, status, 
+                   generation_phase, phase_progress, total_phases, current_phase_status, error_message,
+                   progression_type, tone, difficulty, starting_level, campaign_length, 
+                   additional_notes, metadata, created_at, updated_at
             FROM campaigns
             WHERE id = $1
             "#,
@@ -52,7 +84,10 @@ impl CampaignService {
     pub async fn list_campaigns(&self) -> ApiResult<Vec<Campaign>> {
         let campaigns = sqlx::query_as::<_, Campaign>(
             r#"
-            SELECT id, name, setting, themes, player_characters, status, metadata, created_at, updated_at
+            SELECT id, name, setting, themes, player_characters, status, 
+                   generation_phase, phase_progress, total_phases, current_phase_status, error_message,
+                   progression_type, tone, difficulty, starting_level, campaign_length, 
+                   additional_notes, metadata, created_at, updated_at
             FROM campaigns
             ORDER BY created_at DESC
             "#,
@@ -76,7 +111,10 @@ impl CampaignService {
                 metadata = COALESCE($7, metadata),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $1
-            RETURNING id, name, setting, themes, player_characters, status, metadata, created_at, updated_at
+            RETURNING id, name, setting, themes, player_characters, status, 
+                     generation_phase, phase_progress, total_phases, current_phase_status, error_message,
+                     progression_type, tone, difficulty, starting_level, campaign_length, 
+                     additional_notes, metadata, created_at, updated_at
             "#,
         )
         .bind(id)
@@ -139,31 +177,11 @@ impl CampaignService {
         .fetch_all(&self.pool)
         .await?;
 
-        // Get related quest hooks
-        let quest_hooks = sqlx::query_as::<_, QuestHook>(
-            r#"
-            SELECT id, campaign_id, title, description, difficulty, reward, related_npc_ids, related_location_ids, status, created_at, updated_at
-            FROM quest_hooks
-            WHERE campaign_id = $1
-            ORDER BY created_at
-            "#,
-        )
-        .bind(id)
-        .fetch_all(&self.pool)
-        .await?;
+        // Get related quest hooks - TODO: Implement from enhanced schema
+        let quest_hooks = Vec::new();
 
-        // Get related encounters
-        let encounters = sqlx::query_as::<_, Encounter>(
-            r#"
-            SELECT id, campaign_id, location_id, title, description, difficulty, creatures, environmental_factors, created_at, updated_at
-            FROM encounters
-            WHERE campaign_id = $1
-            ORDER BY created_at
-            "#,
-        )
-        .bind(id)
-        .fetch_all(&self.pool)
-        .await?;
+        // Get related encounters - TODO: Implement from enhanced schema  
+        let encounters = Vec::new();
 
         Ok(CampaignDetail {
             campaign,

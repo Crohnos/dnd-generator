@@ -1,0 +1,26 @@
+table:
+  name: race_cultures
+  schema: public
+object_relationships:
+  - name: race
+    using:
+      foreign_key_constraint_on: race_id
+  - name: culture
+    using:
+      foreign_key_constraint_on: culture_id
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

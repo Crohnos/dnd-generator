@@ -1,0 +1,96 @@
+table:
+  name: entities
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+  - name: race
+    using:
+      foreign_key_constraint_on: race_id
+  - name: class
+    using:
+      foreign_key_constraint_on: class_id
+  - name: background
+    using:
+      foreign_key_constraint_on: background_id
+array_relationships:
+  - name: entity_relationships_as_entity1
+    using:
+      foreign_key_constraint_on:
+        column: entity1_id
+        table:
+          name: entity_relationships
+          schema: public
+  - name: entity_relationships_as_entity2
+    using:
+      foreign_key_constraint_on:
+        column: entity2_id
+        table:
+          name: entity_relationships
+          schema: public
+  - name: entity_locations
+    using:
+      foreign_key_constraint_on:
+        column: entity_id
+        table:
+          name: entity_locations
+          schema: public
+  - name: entity_factions
+    using:
+      foreign_key_constraint_on:
+        column: entity_id
+        table:
+          name: entity_factions
+          schema: public
+  - name: entity_items
+    using:
+      foreign_key_constraint_on:
+        column: entity_id
+        table:
+          name: entity_items
+          schema: public
+  - name: owned_shops
+    using:
+      foreign_key_constraint_on:
+        column: owner_entity_id
+        table:
+          name: shops
+          schema: public
+  - name: owned_taverns
+    using:
+      foreign_key_constraint_on:
+        column: owner_entity_id
+        table:
+          name: taverns
+          schema: public
+  - name: temples_as_high_priest
+    using:
+      foreign_key_constraint_on:
+        column: high_priest_entity_id
+        table:
+          name: temples
+          schema: public
+  - name: quest_entities
+    using:
+      foreign_key_constraint_on:
+        column: entity_id
+        table:
+          name: quest_entities
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

@@ -38,6 +38,15 @@ db-setup:
   docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/003_locations.sql 2>/dev/null || echo "Migrations already applied"
   docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/004_quests_encounters.sql 2>/dev/null || echo "Migrations already applied"
   docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/005_sample_data.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/006_world_building.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/007_character_building.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/008_entity_system.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/009_locations_enhanced.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/010_items_system.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/011_social_systems.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/012_migration_cleanup.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/013_additional_systems.sql 2>/dev/null || echo "Migrations already applied"
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/014_migration_summary.sql 2>/dev/null || echo "Migrations already applied"
   @echo "Database setup complete!"
 
 # Reset database completely
@@ -107,6 +116,16 @@ migrate:
   docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/002_npcs.sql
   docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/003_locations.sql
   docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/004_quests_encounters.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/005_sample_data.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/006_world_building.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/007_character_building.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/008_entity_system.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/009_locations_enhanced.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/010_items_system.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/011_social_systems.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/012_migration_cleanup.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/013_additional_systems.sql
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/014_migration_summary.sql
 
 # Access PostgreSQL CLI
 psql:

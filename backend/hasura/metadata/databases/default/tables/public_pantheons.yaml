@@ -1,0 +1,31 @@
+table:
+  name: pantheons
+  schema: public
+object_relationships:
+  - name: campaign
+    using:
+      foreign_key_constraint_on: campaign_id
+array_relationships:
+  - name: deities
+    using:
+      foreign_key_constraint_on:
+        column: pantheon_id
+        table:
+          name: deities
+          schema: public
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

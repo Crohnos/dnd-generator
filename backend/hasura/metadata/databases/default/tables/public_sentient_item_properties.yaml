@@ -1,0 +1,23 @@
+table:
+  name: sentient_item_properties
+  schema: public
+object_relationships:
+  - name: item
+    using:
+      foreign_key_constraint_on: item_id
+select_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns: '*'
+update_permissions:
+  - role: public
+    permission:
+      columns: '*'
+      filter: {}
+      check: {}

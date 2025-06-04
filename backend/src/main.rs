@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Database connection established");
 
     // Create app state
-    let state = AppState::new(pool, &config);
+    let state = AppState::new(pool, &config).await?;
 
     // Build our application with routes
     let app = Router::new()

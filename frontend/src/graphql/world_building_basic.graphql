@@ -1,0 +1,107 @@
+# Basic world building queries for tables that exist
+
+query GetWorldHistory($campaign_id: Int!) {
+  world_history(
+    where: { campaign_id: { _eq: $campaign_id } },
+    order_by: { start_year: asc }
+  ) {
+    id
+    era_name
+    start_year
+    end_year
+    description
+    major_events
+    significance
+    created_at
+  }
+}
+
+query GetGeographyRegions($campaign_id: Int!) {
+  geography_regions(where: { campaign_id: { _eq: $campaign_id } }) {
+    id
+    name
+    region_type
+    climate
+    terrain
+    notable_features
+    native_flora
+    native_fauna
+    resources
+    hazards
+    created_at
+    updated_at
+  }
+}
+
+query GetPantheonsAndDeities($campaign_id: Int!) {
+  pantheons(where: { campaign_id: { _eq: $campaign_id } }) {
+    id
+    name
+    description
+    origin_culture
+    pantheon_type
+    influence_level
+    created_at
+  }
+  
+  deities(where: { campaign_id: { _eq: $campaign_id } }) {
+    id
+    name
+    title
+    alignment
+    domains
+    symbol
+    description
+    worshippers
+    holy_days
+    clergy_structure
+    created_at
+    pantheon_id
+  }
+}
+
+query GetPlanes($campaign_id: Int!) {
+  planes(where: { campaign_id: { _eq: $campaign_id } }) {
+    id
+    name
+    description
+    plane_type
+    accessibility
+    native_creatures
+    planar_traits
+    notable_locations
+    created_at
+    updated_at
+  }
+}
+
+query GetEconomicSystems($campaign_id: Int!) {
+  economic_systems(where: { campaign_id: { _eq: $campaign_id } }) {
+    id
+    name
+    economic_type
+    base_currency
+    currency_system
+    trade_routes
+    major_exports
+    major_imports
+    taxation_system
+    created_at
+    updated_at
+  }
+}
+
+query GetLegalSystems($campaign_id: Int!) {
+  legal_systems(where: { campaign_id: { _eq: $campaign_id } }) {
+    id
+    name
+    government_type
+    ruling_body
+    law_enforcement
+    court_system
+    punishment_system
+    citizen_rights
+    created_at
+    updated_at
+  }
+}
