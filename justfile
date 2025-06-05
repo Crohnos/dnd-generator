@@ -27,26 +27,18 @@ dev:
   @echo "Run backend with: cd backend && cargo run"
   @echo "Run frontend with: cd frontend && npm run dev"
 
-# Initialize database with migrations
+# Initialize database with migrations  
 db-setup:
   @echo "Setting up database..."
   docker-compose up -d postgres
-  sleep 5
-  @echo "Running migrations..."
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/001_initial.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/002_npcs.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/003_locations.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/004_quests_encounters.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/005_sample_data.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/006_world_building.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/007_character_building.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/008_entity_system.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/009_locations_enhanced.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/010_items_system.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/011_social_systems.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/012_migration_cleanup.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/013_additional_systems.sql 2>/dev/null || echo "Migrations already applied"
-  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/014_migration_summary.sql 2>/dev/null || echo "Migrations already applied"
+  @echo "Waiting for PostgreSQL to be ready..."
+  sleep 10
+  @echo "Running main schema migration..."
+  docker-compose exec -T postgres psql -U postgres -d dnd_campaigns -f /docker-entrypoint-initdb.d/schema.sql 2>/dev/null || echo "Schema already applied"
+  @echo "Starting Hasura..."
+  docker-compose up -d hasura
+  @echo "Waiting for Hasura to be ready..."
+  sleep 10
   @echo "Database setup complete!"
 
 # Reset database completely
@@ -54,8 +46,18 @@ db-reset:
   @echo "Resetting database..."
   docker-compose down -v
   docker-compose up -d postgres
-  sleep 5
-  just db-setup
+  @echo "Waiting for PostgreSQL to be ready..."
+  sleep 10
+  @echo "Starting Hasura..."
+  docker-compose up -d hasura
+  @echo "Waiting for Hasura to be ready..."
+  sleep 10
+  @echo "Reloading Hasura metadata..."
+  curl -s -X POST http://localhost:8080/v1/metadata \
+    -H "x-hasura-admin-secret: myadminsecretkey" \
+    -H "Content-Type: application/json" \
+    -d '{"type": "reload_metadata", "args": {}}' > /dev/null || echo "Metadata reload failed (will retry)"
+  sleep 2
   @echo "Database reset complete!"
 
 # Generate GraphQL types

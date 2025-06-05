@@ -89,9 +89,16 @@ impl GraphQLClient {
 
     // Helper methods for common operations
     pub async fn insert_one(&self, table: &str, object: Value) -> ApiResult<Value> {
+        // For campaigns table, we need to return all fields
+        let returning_fields = if table == "campaigns" {
+            "id name setting themes player_characters status generation_phase phase_progress total_phases current_phase_status error_message progression_type tone difficulty starting_level campaign_length additional_notes metadata created_at updated_at"
+        } else {
+            "id"
+        };
+        
         let mutation = format!(
-            "mutation InsertOne($object: {}_insert_input!) {{ insert_{}_one(object: $object) {{ id }} }}",
-            table, table
+            "mutation InsertOne($object: {}_insert_input!) {{ insert_{}_one(object: $object) {{ {} }} }}",
+            table, table, returning_fields
         );
         
         let variables = json!({ "object": object });
@@ -217,42 +224,49 @@ impl GraphQLClient {
             .ok_or_else(|| ApiError::BadRequest("No ID in magic item insert result".to_string()))
     }
 
-    pub async fn save_shop(&self, location_id: i32, shop_data: &Value) -> ApiResult<i32> {
+    pub async fn save_shop(&self, building_id: i32, shop_data: &Value) -> ApiResult<i32> {
         let object = json!({
-            "location_id": location_id,
-            "name": shop_data.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown Shop"),
-            "shop_type": shop_data.get("type").and_then(|v| v.as_str()).unwrap_or("general"),
-            "owner": shop_data.get("owner").and_then(|v| v.as_str()).unwrap_or(""),
-            "description": shop_data.get("description").and_then(|v| v.as_str()).unwrap_or(""),
+            "building_id": building_id,
+            "shop_type": shop_data.get("shop_type").and_then(|v| v.as_str())
+                .or_else(|| shop_data.get("type").and_then(|v| v.as_str()))
+                .unwrap_or("general"),
+            "owner_entity_id": shop_data.get("owner_entity_id").and_then(|v| v.as_i64()),
             "specialties": shop_data.get("specialties")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
                 .unwrap_or_default(),
-            "notable_items": shop_data.get("notable_items")
+            "inventory_level": shop_data.get("inventory_level").and_then(|v| v.as_str()),
+            "price_modifier": shop_data.get("price_modifier").and_then(|v| v.as_f64()),
+            "reputation": shop_data.get("reputation").and_then(|v| v.as_str()),
+            "special_services": shop_data.get("special_services")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
                 .unwrap_or_default()
         });
 
-        let result = self.insert_one("shops", object).await?;
+        let result = self.insert_one("shops", json!(object)).await?;
         result.get("id")
             .and_then(|v| v.as_i64())
             .map(|v| v as i32)
             .ok_or_else(|| ApiError::BadRequest("No ID in shop insert result".to_string()))
     }
 
-    pub async fn save_tavern(&self, location_id: i32, tavern_data: &Value) -> ApiResult<i32> {
+    pub async fn save_tavern(&self, building_id: i32, tavern_data: &Value) -> ApiResult<i32> {
         let object = json!({
-            "location_id": location_id,
-            "name": tavern_data.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown Tavern"),
-            "owner": tavern_data.get("owner").and_then(|v| v.as_str()).unwrap_or(""),
-            "description": tavern_data.get("description").and_then(|v| v.as_str()).unwrap_or(""),
-            "atmosphere": tavern_data.get("atmosphere").and_then(|v| v.as_str()).unwrap_or(""),
+            "building_id": building_id,
+            "owner_entity_id": tavern_data.get("owner_entity_id").and_then(|v| v.as_i64()),
+            "atmosphere": tavern_data.get("atmosphere").and_then(|v| v.as_str()),
             "specialties": tavern_data.get("specialties")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
                 .unwrap_or_default(),
-            "regular_patrons": tavern_data.get("regular_patrons")
+            "room_rates": tavern_data.get("room_rates").unwrap_or(&json!({})),
+            "entertainment": tavern_data.get("entertainment")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
+                .unwrap_or_default(),
+            "regular_clientele": tavern_data.get("regular_clientele").and_then(|v| v.as_str()),
+            "rumors_available": tavern_data.get("rumors_available")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
                 .unwrap_or_default()
@@ -265,17 +279,22 @@ impl GraphQLClient {
             .ok_or_else(|| ApiError::BadRequest("No ID in tavern insert result".to_string()))
     }
 
-    pub async fn save_temple(&self, location_id: i32, temple_data: &Value) -> ApiResult<i32> {
+    pub async fn save_temple(&self, building_id: i32, temple_data: &Value) -> ApiResult<i32> {
         let object = json!({
-            "location_id": location_id,
-            "name": temple_data.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown Temple"),
-            "deity": temple_data.get("deity").and_then(|v| v.as_str()).unwrap_or(""),
-            "high_priest": temple_data.get("high_priest").and_then(|v| v.as_str()).unwrap_or(""),
-            "description": temple_data.get("description").and_then(|v| v.as_str()).unwrap_or(""),
+            "building_id": building_id,
+            "deity_id": temple_data.get("deity_id").and_then(|v| v.as_i64()),
+            "high_priest_entity_id": temple_data.get("high_priest_entity_id").and_then(|v| v.as_i64()),
             "services": temple_data.get("services")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
-                .unwrap_or_default()
+                .unwrap_or_default(),
+            "holy_days": temple_data.get("holy_days").unwrap_or(&json!([])),
+            "relics": temple_data.get("relics")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
+                .unwrap_or_default(),
+            "congregation_size": temple_data.get("congregation_size").and_then(|v| v.as_str()),
+            "influence_level": temple_data.get("influence_level").and_then(|v| v.as_str())
         });
 
         let result = self.insert_one("temples", object).await?;
@@ -488,6 +507,17 @@ impl GraphQLClient {
             for entity in entities {
                 let mut entity_obj = entity.as_object().unwrap_or(&serde_json::Map::new()).clone();
                 entity_obj.insert("campaign_id".to_string(), json!(campaign_id));
+                
+                // Validate and clean class_id to prevent foreign key violations
+                if let Some(class_id) = entity_obj.get("class_id") {
+                    if let Some(class_id_num) = class_id.as_i64() {
+                        // Only allow valid class_id range (1-20), otherwise set to null
+                        if class_id_num < 1 || class_id_num > 20 {
+                            entity_obj.insert("class_id".to_string(), json!(null));
+                        }
+                    }
+                }
+                
                 self.insert_one("entities", json!(entity_obj)).await?;
                 saved_entities.push("entities".to_string());
             }
@@ -610,8 +640,45 @@ impl GraphQLClient {
         // Shops
         if let Some(shops) = phase_data.get("shops").and_then(|v| v.as_array()) {
             for shop in shops {
-                let shop_obj = shop.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("shops", json!(shop_obj)).await?;
+                let empty_map = serde_json::Map::new();
+                let shop_data = shop.as_object().unwrap_or(&empty_map);
+                let mut shop_obj = json!({
+                    "campaign_id": campaign_id,
+                    "shop_type": shop_data.get("shop_type").and_then(|v| v.as_str())
+                        .or_else(|| shop_data.get("type").and_then(|v| v.as_str()))
+                        .unwrap_or("general")
+                });
+                
+                // Add optional fields if they exist and are valid
+                if let Some(building_id) = shop_data.get("building_id").and_then(|v| v.as_i64()) {
+                    shop_obj.as_object_mut().unwrap().insert("building_id".to_string(), json!(building_id));
+                }
+                if let Some(owner_id) = shop_data.get("owner_entity_id").and_then(|v| v.as_i64()) {
+                    shop_obj.as_object_mut().unwrap().insert("owner_entity_id".to_string(), json!(owner_id));
+                }
+                if let Some(specialties) = shop_data.get("specialties").and_then(|v| v.as_array()) {
+                    let specialty_strings: Vec<String> = specialties.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                    shop_obj.as_object_mut().unwrap().insert("specialties".to_string(), json!(specialty_strings));
+                }
+                if let Some(inventory) = shop_data.get("inventory_level").and_then(|v| v.as_str()) {
+                    shop_obj.as_object_mut().unwrap().insert("inventory_level".to_string(), json!(inventory));
+                }
+                if let Some(price_mod) = shop_data.get("price_modifier").and_then(|v| v.as_f64()) {
+                    shop_obj.as_object_mut().unwrap().insert("price_modifier".to_string(), json!(price_mod));
+                }
+                if let Some(reputation) = shop_data.get("reputation").and_then(|v| v.as_str()) {
+                    shop_obj.as_object_mut().unwrap().insert("reputation".to_string(), json!(reputation));
+                }
+                if let Some(services) = shop_data.get("special_services").and_then(|v| v.as_array()) {
+                    let service_strings: Vec<String> = services.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                    shop_obj.as_object_mut().unwrap().insert("special_services".to_string(), json!(service_strings));
+                }
+                
+                self.insert_one("shops", shop_obj).await?;
                 saved_entities.push("shops".to_string());
             }
         }
@@ -619,8 +686,48 @@ impl GraphQLClient {
         // Taverns
         if let Some(taverns) = phase_data.get("taverns").and_then(|v| v.as_array()) {
             for tavern in taverns {
-                let tavern_obj = tavern.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("taverns", json!(tavern_obj)).await?;
+                let empty_map = serde_json::Map::new();
+                let tavern_data = tavern.as_object().unwrap_or(&empty_map);
+                let mut tavern_obj = json!({
+                    "campaign_id": campaign_id
+                });
+                
+                // Add required and optional fields with validation
+                if let Some(building_id) = tavern_data.get("building_id").and_then(|v| v.as_i64()) {
+                    tavern_obj.as_object_mut().unwrap().insert("building_id".to_string(), json!(building_id));
+                }
+                if let Some(owner_id) = tavern_data.get("owner_entity_id").and_then(|v| v.as_i64()) {
+                    tavern_obj.as_object_mut().unwrap().insert("owner_entity_id".to_string(), json!(owner_id));
+                }
+                if let Some(atmosphere) = tavern_data.get("atmosphere").and_then(|v| v.as_str()) {
+                    tavern_obj.as_object_mut().unwrap().insert("atmosphere".to_string(), json!(atmosphere));
+                }
+                if let Some(specialties) = tavern_data.get("specialties").and_then(|v| v.as_array()) {
+                    let specialty_strings: Vec<String> = specialties.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                    tavern_obj.as_object_mut().unwrap().insert("specialties".to_string(), json!(specialty_strings));
+                }
+                if let Some(rates) = tavern_data.get("room_rates") {
+                    tavern_obj.as_object_mut().unwrap().insert("room_rates".to_string(), rates.clone());
+                }
+                if let Some(entertainment) = tavern_data.get("entertainment").and_then(|v| v.as_array()) {
+                    let entertainment_strings: Vec<String> = entertainment.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                    tavern_obj.as_object_mut().unwrap().insert("entertainment".to_string(), json!(entertainment_strings));
+                }
+                if let Some(clientele) = tavern_data.get("regular_clientele").and_then(|v| v.as_str()) {
+                    tavern_obj.as_object_mut().unwrap().insert("regular_clientele".to_string(), json!(clientele));
+                }
+                if let Some(rumors) = tavern_data.get("rumors_available").and_then(|v| v.as_array()) {
+                    let rumor_strings: Vec<String> = rumors.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                    tavern_obj.as_object_mut().unwrap().insert("rumors_available".to_string(), json!(rumor_strings));
+                }
+                
+                self.insert_one("taverns", tavern_obj).await?;
                 saved_entities.push("taverns".to_string());
             }
         }
@@ -628,8 +735,45 @@ impl GraphQLClient {
         // Temples
         if let Some(temples) = phase_data.get("temples").and_then(|v| v.as_array()) {
             for temple in temples {
-                let temple_obj = temple.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("temples", json!(temple_obj)).await?;
+                let empty_map = serde_json::Map::new();
+                let temple_data = temple.as_object().unwrap_or(&empty_map);
+                let mut temple_obj = json!({
+                    "campaign_id": campaign_id
+                });
+                
+                // Add required and optional fields with validation
+                if let Some(building_id) = temple_data.get("building_id").and_then(|v| v.as_i64()) {
+                    temple_obj.as_object_mut().unwrap().insert("building_id".to_string(), json!(building_id));
+                }
+                if let Some(deity_id) = temple_data.get("deity_id").and_then(|v| v.as_i64()) {
+                    temple_obj.as_object_mut().unwrap().insert("deity_id".to_string(), json!(deity_id));
+                }
+                if let Some(priest_id) = temple_data.get("high_priest_entity_id").and_then(|v| v.as_i64()) {
+                    temple_obj.as_object_mut().unwrap().insert("high_priest_entity_id".to_string(), json!(priest_id));
+                }
+                if let Some(services) = temple_data.get("services").and_then(|v| v.as_array()) {
+                    let service_strings: Vec<String> = services.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                    temple_obj.as_object_mut().unwrap().insert("services".to_string(), json!(service_strings));
+                }
+                if let Some(holy_days) = temple_data.get("holy_days") {
+                    temple_obj.as_object_mut().unwrap().insert("holy_days".to_string(), holy_days.clone());
+                }
+                if let Some(relics) = temple_data.get("relics").and_then(|v| v.as_array()) {
+                    let relic_strings: Vec<String> = relics.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
+                    temple_obj.as_object_mut().unwrap().insert("relics".to_string(), json!(relic_strings));
+                }
+                if let Some(congregation) = temple_data.get("congregation_size").and_then(|v| v.as_str()) {
+                    temple_obj.as_object_mut().unwrap().insert("congregation_size".to_string(), json!(congregation));
+                }
+                if let Some(influence) = temple_data.get("influence_level").and_then(|v| v.as_str()) {
+                    temple_obj.as_object_mut().unwrap().insert("influence_level".to_string(), json!(influence));
+                }
+                
+                self.insert_one("temples", temple_obj).await?;
                 saved_entities.push("temples".to_string());
             }
         }

@@ -129,8 +129,8 @@ impl HasuraSchemaGenerator {
         let mut required = Vec::new();
 
         for field in input_fields {
-            // Skip internal Hasura fields
-            if field.name.starts_with("_") {
+            // Skip internal Hasura fields and campaign_id (we add campaign_id programmatically)
+            if field.name.starts_with("_") || field.name == "campaign_id" {
                 continue;
             }
 

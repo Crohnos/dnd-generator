@@ -24,7 +24,11 @@
       "Bash(/home/crohnos/dnd-generator/track_tables.sh)",
       "Bash(HASURA_ADMIN_SECRET=dev-secret cargo run --bin test_hasura_schema)",
       "Bash(HASURA_ADMIN_SECRET=myadminsecretkey cargo run --bin test_hasura_schema)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(just dev:*)",
+      "Bash(python3:*)",
+      "Bash(just db-reset:*)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -l)"
     ],
     "deny": []
   },

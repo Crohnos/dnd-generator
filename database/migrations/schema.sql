@@ -518,6 +518,7 @@ CREATE INDEX idx_locations_type ON locations(location_type);
 -- Dungeons (special location type)
 CREATE TABLE dungeons (
     id SERIAL PRIMARY KEY,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     location_id INTEGER NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
     dungeon_type TEXT, -- cave, ruins, tower, temple, etc.
     levels INTEGER DEFAULT 1,
@@ -536,6 +537,7 @@ CREATE TABLE dungeons (
 -- Buildings (special location type)
 CREATE TABLE buildings (
     id SERIAL PRIMARY KEY,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     location_id INTEGER NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
     building_type TEXT, -- shop, tavern, temple, residence, etc.
     floors INTEGER DEFAULT 1,
@@ -551,6 +553,7 @@ CREATE TABLE buildings (
 -- Shops
 CREATE TABLE shops (
     id SERIAL PRIMARY KEY,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     building_id INTEGER NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
     shop_type TEXT NOT NULL,
     owner_entity_id INTEGER REFERENCES entities(id),
@@ -565,6 +568,7 @@ CREATE TABLE shops (
 -- Taverns
 CREATE TABLE taverns (
     id SERIAL PRIMARY KEY,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     building_id INTEGER NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
     owner_entity_id INTEGER REFERENCES entities(id),
     atmosphere TEXT,
@@ -579,6 +583,7 @@ CREATE TABLE taverns (
 -- Temples
 CREATE TABLE temples (
     id SERIAL PRIMARY KEY,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
     building_id INTEGER NOT NULL REFERENCES buildings(id) ON DELETE CASCADE,
     deity_id INTEGER REFERENCES deities(id),
     high_priest_entity_id INTEGER REFERENCES entities(id),
@@ -949,3 +954,14 @@ WITH RECURSIVE location_tree AS (
     JOIN location_tree lt ON l.parent_location_id = lt.id
 )
 SELECT * FROM location_tree;
+
+-- ============================================================================
+-- Additional Indexes for Campaign Isolation
+-- ============================================================================
+
+-- Indexes for new campaign_id columns to ensure fast filtering by campaign
+CREATE INDEX idx_buildings_campaign_id ON buildings(campaign_id);
+CREATE INDEX idx_dungeons_campaign_id ON dungeons(campaign_id);
+CREATE INDEX idx_shops_campaign_id ON shops(campaign_id);
+CREATE INDEX idx_taverns_campaign_id ON taverns(campaign_id);
+CREATE INDEX idx_temples_campaign_id ON temples(campaign_id);

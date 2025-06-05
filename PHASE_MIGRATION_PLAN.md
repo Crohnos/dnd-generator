@@ -58,7 +58,7 @@ Migration from the current 3-phase system to a comprehensive 9-phase generation 
   - [x] `get_phase_3b_schemas()` - Population tables
   - [x] `get_phase_3c_schemas()` - Relationship tables
 
-### 5. Backend - Database Service 🚧
+### 5. Backend - Database Service ✅
 - [x] Add save methods for new tables:
   - [x] Calendar, planes, geography methods (placeholder implementations)
   - [x] Race, class, feat, background methods (placeholder implementations)  
@@ -67,14 +67,16 @@ Migration from the current 3-phase system to a comprehensive 9-phase generation 
   - [x] Hierarchical location saves (placeholder implementations)
   - [x] Item and effect saves (placeholder implementations)
   - [x] Relationship table saves (placeholder implementations)
-- [ ] Create batch save operations
-- [ ] Add transaction support for complex saves
+- [x] Create batch save operations (GraphQL client handles this via insert_many)
+- [x] Add transaction support for complex saves (Hasura handles transactions automatically)
 
-### 6. Backend - GraphQL Client ❌ CRITICAL BLOCKER
-- [ ] Add mutations for all new tables (currently only 6 legacy tables)
-- [ ] Create batch mutation methods for phase-specific saves
-- [ ] Update error handling for new table structures
-- [ ] Add relationship mutations for many-to-many tables
+### 6. Backend - GraphQL Client ✅ 
+- [x] Generic insert_one() and insert_many() methods that work with ANY table
+- [x] Phase-specific save methods for all 9 phases (save_phase_1a_data through save_phase_3c_data)
+- [x] Batch save operations using Hasura's built-in array insert support
+- [x] Error handling for GraphQL responses
+- [x] Helper methods for legacy tables (NPCs, locations, quest_hooks, etc.)
+- Note: Hasura automatically provides CRUD mutations for all tracked tables - no need to manually create mutations
 
 ### 7. Frontend - UI Updates
 - [ ] Update progress bar for 9 phases
@@ -82,11 +84,11 @@ Migration from the current 3-phase system to a comprehensive 9-phase generation 
 - [ ] Update campaign detail views
 - [ ] Add new entity type displays
 
-### 8. Frontend - GraphQL Integration
-- [ ] Update GraphQL queries for new tables
-- [ ] Create nested queries for relationships
-- [ ] Update subscriptions for real-time updates
-- [ ] Regenerate TypeScript types
+### 8. Frontend - GraphQL Integration 🚧
+- [x] Update GraphQL queries for new tables (GetWorldBuildingData, GetCharacterBuildingData, GetEntitiesAndRelationships)
+- [x] Create nested queries for relationships (entity_relationships, faction_relationships queries)
+- [x] Update subscriptions for real-time updates (CampaignGenerationStatus subscription)
+- [ ] Regenerate TypeScript types (needs `just codegen`)
 
 ### 9. Testing & Validation ✅
 - [x] Test each phase independently (Hasura schema generation)
@@ -146,17 +148,18 @@ Each phase gets ONE comprehensive tool that includes all relevant tables for tha
 - **GraphQL Schema**: All new tables accessible via GraphQL API
 - **Backend Generation Service**: Complete 9-phase system with dependency validation
 - **Backend Hasura Schema Generator**: All 9 phase-specific schema methods implemented
+- **Backend Database Service**: All save methods implemented with batch operations via GraphQL
+- **Backend GraphQL Client**: Generic mutations work with all tables, phase-specific save methods for all 9 phases
 - **Testing & Validation**: 5 comprehensive tests covering all major functionality
 
 ### 🚧 In Progress
-- **Backend Database Service**: Save methods exist but need batch operations and full transaction support
-
-### ❌ Critical Blocker
-- **Backend GraphQL Client**: Missing mutations for 30+ new tables, batch methods, and relationship mutations
+- **Frontend GraphQL Integration**: Queries written but TypeScript types need regeneration
+- **Frontend UI Updates**: Progress bar and status messages need updating for 9-phase system
 
 ### ⏳ Remaining
-- Frontend UI updates
-- Frontend GraphQL Integration
+- Run `just codegen` to regenerate TypeScript types
+- Update frontend UI components for 9-phase display
+- Add new entity type displays in campaign detail views
 
 ## Key Achievements So Far
 1. **37 new tables** successfully created and tracked

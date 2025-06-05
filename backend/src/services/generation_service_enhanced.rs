@@ -157,9 +157,20 @@ impl GenerationServiceEnhanced {
             .ok_or_else(|| ApiError::BadRequest("Failed to generate Phase 1A schemas".to_string()))?;
 
         // Call AI with tool to generate content
-        let response = self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await?;
+        info!("Calling Anthropic API for Phase 1A generation...");
+        let response = match self.anthropic.generate_with_tool(&prompt, tool, phase.max_tokens, phase.temperature).await {
+            Ok(resp) => {
+                info!("Successfully received response from Anthropic API");
+                resp
+            },
+            Err(e) => {
+                error!("Failed to generate content with Anthropic API: {:?}", e);
+                return Err(e);
+            }
+        };
         
         // Save content using database service
+        info!("Saving Phase 1A content to database...");
         self.save_phase_1a_content(campaign_id, &response).await?;
 
         Ok(())
