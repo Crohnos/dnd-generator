@@ -2,146 +2,76 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Users, MapPin, Scroll, BarChart3, AlertCircle, Sparkles } from 'lucide-react';
+import { 
+  ArrowLeft, Users, MapPin, Scroll, BarChart3, AlertCircle, Sparkles, 
+  Globe, Crown, Building2, Sword, BookOpen, Languages, Coins
+} from 'lucide-react';
 import { useState } from 'react';
-import { NPCCard } from '@/components/NPCCard';
+import { 
+  useGetCampaignQuery, 
+  useGetNpCsQuery,
+  useGetLocationsQuery,
+  useGetQuestHooksQuery,
+  useGetEncountersQuery,
+  useGetWorldBuildingDataQuery,
+  useGetCharacterBuildingDataQuery,
+  useGetEntitiesAndRelationshipsQuery
+} from '@/generated/graphql';
+
+// Import components (will create these)
+import { EntityCard } from '@/components/EntityCard';
 import { LocationCard } from '@/components/LocationCard';
 import { QuestHookCard } from '@/components/QuestHookCard';
-import { useGetCampaignQuery } from '@/generated/graphql';
+import { WorldBuildingCard } from '@/components/WorldBuildingCard';
+import { CharacterBuildingCard } from '@/components/CharacterBuildingCard';
 
-// Mock data - will be replaced with GraphQL query
-const mockCampaign = {
-  id: 1,
-  name: 'The Shattered Crown',
-  setting: 'A war-torn kingdom where ancient magic clashes with political intrigue',
-  themes: ['political intrigue', 'war', 'mystery'],
-  status: 'ready' as const,
-  metadata: {
-    plot_summary: 'The rightful heir to the throne has been murdered, and dark forces seek to claim power.',
-    central_conflict: 'Ancient magical artifacts are being used to manipulate the succession.',
-  },
-  npcs: [
-    {
-      id: 1,
-      name: 'Lord Aldric Blackwood',
-      role: 'Noble Conspirator',
-      description: 'A cunning lord who seeks to claim the throne through manipulation and dark magic. His piercing blue eyes seem to see through every lie, while his silver tongue has earned him many allies—and enemies.',
-      personality: {
-        traits: ['Ambitious', 'Manipulative', 'Charming', 'Ruthless'],
-        motivation: 'To claim the throne and restore what he believes is rightful order to the realm',
-        fears: ['Loss of control', 'Being exposed as a fraud'],
-        connections: ['Has spies in the royal court', 'Secretly funding rebel groups']
-      },
-      secret_info: 'Aldric is actually the bastard son of the previous king and believes he has a legitimate claim to the throne. He possesses a cursed amulet that grants him influence over weak-willed individuals.'
-    },
-    {
-      id: 2,
-      name: 'Sister Marianne',
-      role: 'Temple Priest',
-      description: 'A devoted cleric who tends to the spiritual needs of the people while harboring doubts about the divine.',
-      personality: {
-        traits: ['Compassionate', 'Doubting', 'Protective', 'Wise'],
-        motivation: 'To protect the innocent and find true meaning in her faith',
-        fears: ['That the gods have abandoned them', 'Failing those who depend on her'],
-        connections: ['Leads the underground resistance', 'Has visions of the future']
-      },
-      secret_info: 'Marianne is losing her divine powers due to her crisis of faith, but she\'s discovered she has latent sorcerous abilities that she\'s afraid to use.'
-    },
-    {
-      id: 3,
-      name: 'Captain Marcus Ironhold',
-      role: 'Guard Captain',
-      description: 'A grizzled veteran who maintains order in the capital while questioning his loyalties.',
-      personality: {
-        traits: ['Honorable', 'Conflicted', 'Loyal', 'Weary'],
-        motivation: 'To serve justice and protect the people, regardless of who sits on the throne',
-        fears: ['Civil war destroying everything he\'s sworn to protect'],
-        connections: ['Commands the city watch', 'Secret meetings with rebel leaders']
-      },
-      secret_info: 'Marcus knows the location of the true heir and is secretly protecting them while trying to decide if they\'re worthy of the crown.'
-    }
-  ],
-  locations: [
-    {
-      id: 1,
-      name: 'Shadowmere Castle',
-      type: 'Castle',
-      description: 'An imposing fortress shrouded in mystery and ancient power. Its black stone walls seem to absorb light, and strange whispers echo through its corridors.',
-      properties: {
-        atmosphere: 'Dark and foreboding, with an undercurrent of magical energy that makes visitors uneasy',
-        notable_features: ['Ancient magical wards', 'Hidden passages', 'Throne room with enchanted crown', 'Underground dungeons'],
-        secrets: ['Contains a portal to the Shadowfell in the deepest dungeon', 'The castle itself is sentient and chooses its rulers'],
-        connections: ['Connected to the capital by the King\'s Road', 'Has secret tunnels leading to the nearby forest']
-      }
-    },
-    {
-      id: 2,
-      name: 'The Whispering Woods',
-      type: 'Forest',
-      description: 'A dense woodland where the trees seem to murmur secrets and the paths shift when no one is looking.',
-      properties: {
-        atmosphere: 'Mystical and alive, filled with the rustle of leaves that sound almost like voices',
-        notable_features: ['Talking trees', 'Pools of starlight', 'Ruins of an ancient druid circle', 'Wildlife that seems unusually intelligent'],
-        secrets: ['The true heir is hidden in a cottage deep within', 'Ancient fey magic still lingers here'],
-        connections: ['Borders Shadowmere Castle', 'Hidden paths to the capital']
-      }
-    },
-    {
-      id: 3,
-      name: 'The Broken Crown Tavern',
-      type: 'Tavern',
-      description: 'A bustling inn where information flows as freely as the ale, and every patron seems to have a secret.',
-      properties: {
-        atmosphere: 'Warm but tense, filled with hushed conversations and watchful eyes',
-        notable_features: ['Secret meeting rooms upstairs', 'A bard who knows every rumor', 'Customers from all walks of life', 'Hidden messages in the menu'],
-        secrets: ['Serves as headquarters for the resistance', 'The innkeeper is a retired spy'],
-        connections: ['Located in the capital city', 'Has tunnels connecting to the temple district']
-      }
-    }
-  ],
-  quest_hooks: [
-    {
-      id: 1,
-      title: 'The Lost Heir',
-      description: 'Investigate rumors of a surviving heir hidden in the countryside. Multiple sources claim they\'ve seen someone bearing the royal birthmark.',
-      difficulty: 'medium' as const,
-      status: 'available' as const,
-      reward: '500 gold pieces and a royal pardon for any past crimes',
-      related_npc_ids: [3],
-      related_location_ids: [2]
-    },
-    {
-      id: 2,
-      title: 'The Cursed Amulet',
-      description: 'Strange reports of people acting against their will have been linked to a mysterious noble. Discover the source of this magical influence.',
-      difficulty: 'hard' as const,
-      status: 'available' as const,
-      reward: 'Ancient spellbook and the gratitude of the resistance',
-      related_npc_ids: [1],
-      related_location_ids: [1]
-    },
-    {
-      id: 3,
-      title: 'Crisis of Faith',
-      description: 'Help a troubled cleric who is losing her divine powers while mysterious magical events occur around her.',
-      difficulty: 'easy' as const,
-      status: 'active' as const,
-      reward: 'Divine blessing and access to temple resources',
-      related_npc_ids: [2],
-      related_location_ids: [3]
-    }
-  ],
-};
-
-type TabType = 'overview' | 'npcs' | 'locations' | 'quests';
+type TabType = 'overview' | 'entities' | 'locations' | 'quests' | 'world' | 'characters' | 'relationships';
 
 export default function CampaignDetailPage() {
   const params = useParams();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   
   const campaignId = parseInt(params.id as string);
-  const [{ data, fetching, error }] = useGetCampaignQuery({
+  
+  // Main campaign query
+  const [{ data: campaignData, fetching, error }] = useGetCampaignQuery({
     variables: { id: campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
+
+  // Entity queries - only fetch when tabs are active
+  const [{ data: entitiesData }] = useGetNpCsQuery({
+    variables: { campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
+
+  const [{ data: locationsData }] = useGetLocationsQuery({
+    variables: { campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
+
+  const [{ data: questsData }] = useGetQuestHooksQuery({
+    variables: { campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
+
+  const [{ data: encountersData }] = useGetEncountersQuery({
+    variables: { campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
+
+  const [{ data: worldData }] = useGetWorldBuildingDataQuery({
+    variables: { campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
+
+  const [{ data: characterData }] = useGetCharacterBuildingDataQuery({
+    variables: { campaignId },
+    pause: !campaignId || isNaN(campaignId),
+  });
+
+  const [{ data: relationshipsData }] = useGetEntitiesAndRelationshipsQuery({
+    variables: { campaignId },
     pause: !campaignId || isNaN(campaignId),
   });
 
@@ -176,7 +106,7 @@ export default function CampaignDetailPage() {
     );
   }
 
-  const campaign = data?.campaigns_by_pk;
+  const campaign = campaignData?.campaigns_by_pk;
   
   if (!campaign) {
     return (
@@ -195,11 +125,34 @@ export default function CampaignDetailPage() {
     );
   }
 
+  // Calculate statistics
+  const entities = entitiesData?.entities || [];
+  const locations = locationsData?.locations || [];
+  const quests = questsData?.quest_hooks || [];
+  const encounters = encountersData?.encounters || [];
+  
+  const races = characterData?.races || [];
+  const classes = characterData?.character_classes || [];
+  const backgrounds = characterData?.backgrounds || [];
+  const languages = characterData?.languages || [];
+  
+  const pantheons = worldData?.pantheons || [];
+  const deities = worldData?.deities || [];
+  const planes = worldData?.planes || [];
+  const geographyRegions = worldData?.geography_regions || [];
+  const economicSystems = worldData?.economic_systems || [];
+  const legalSystems = worldData?.legal_systems || [];
+  const historicalPeriods = worldData?.historical_periods || [];
+  const calendarSystems = worldData?.calendar_systems || [];
+
   const tabs = [
-    { id: 'overview' as TabType, label: 'Overview', icon: BarChart3 },
-    { id: 'npcs' as TabType, label: 'NPCs', icon: Users },
-    { id: 'locations' as TabType, label: 'Locations', icon: MapPin },
-    { id: 'quests' as TabType, label: 'Quests', icon: Scroll },
+    { id: 'overview' as TabType, label: 'Overview', icon: BarChart3, count: null },
+    { id: 'entities' as TabType, label: 'NPCs & Entities', icon: Users, count: entities.length },
+    { id: 'locations' as TabType, label: 'Locations', icon: MapPin, count: locations.length },
+    { id: 'quests' as TabType, label: 'Adventures', icon: Scroll, count: quests.length },
+    { id: 'world' as TabType, label: 'World Building', icon: Globe, count: pantheons.length + deities.length + planes.length },
+    { id: 'characters' as TabType, label: 'Character Options', icon: BookOpen, count: races.length + classes.length },
+    { id: 'relationships' as TabType, label: 'Relationships', icon: Crown, count: relationshipsData?.entity_relationships?.length || 0 },
   ];
 
   return (
@@ -219,6 +172,29 @@ export default function CampaignDetailPage() {
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">{campaign.name}</h1>
               <p className="text-gray-300 max-w-3xl">{campaign.setting}</p>
+              
+              {/* Generation Status */}
+              <div className="mt-4 flex items-center space-x-4">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  campaign.status === 'completed' 
+                    ? 'bg-green-500 bg-opacity-20 text-green-400' 
+                    : campaign.status === 'generating'
+                    ? 'bg-yellow-500 bg-opacity-20 text-yellow-400'
+                    : campaign.status === 'error'
+                    ? 'bg-red-500 bg-opacity-20 text-red-400'
+                    : 'bg-gray-500 bg-opacity-20 text-gray-400'
+                }`}>
+                  {campaign.status === 'completed' ? 'Ready to Play' : 
+                   campaign.status === 'generating' ? 'Generating...' :
+                   campaign.status === 'error' ? 'Generation Failed' : 'Created'}
+                </span>
+                
+                {campaign.generation_phase && (
+                  <span className="text-gray-400 text-sm">
+                    Phase {campaign.generation_phase} of {campaign.total_phases || 9}
+                  </span>
+                )}
+              </div>
             </div>
             
             {campaign.themes && campaign.themes.length > 0 && (
@@ -240,7 +216,7 @@ export default function CampaignDetailPage() {
 
         {/* Tab Navigation */}
         <div className="border-b border-gray-700 mb-8">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex flex-wrap gap-2 md:gap-0">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -249,7 +225,7 @@ export default function CampaignDetailPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex items-center space-x-2 py-4 px-3 md:px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     isActive
                       ? 'border-dnd-purple text-dnd-purple'
                       : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
@@ -257,6 +233,11 @@ export default function CampaignDetailPage() {
                 >
                   <Icon className="w-5 h-5" />
                   <span>{tab.label}</span>
+                  {tab.count !== null && tab.count > 0 && (
+                    <span className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -267,55 +248,127 @@ export default function CampaignDetailPage() {
         <div className="tab-content">
           {activeTab === 'overview' && (
             <div className="space-y-8">
-              {/* Statistics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <div className="card text-center">
-                  <Users className="w-8 h-8 text-dnd-purple mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-white">{campaign.npcs.length}</div>
-                  <div className="text-gray-400">NPCs</div>
+                  <Users className="w-6 h-6 text-dnd-purple mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">{entities.length}</div>
+                  <div className="text-gray-400 text-sm">NPCs</div>
                 </div>
                 <div className="card text-center">
-                  <MapPin className="w-8 h-8 text-dnd-gold mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-white">{campaign.locations.length}</div>
-                  <div className="text-gray-400">Locations</div>
+                  <MapPin className="w-6 h-6 text-dnd-gold mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">{locations.length}</div>
+                  <div className="text-gray-400 text-sm">Locations</div>
                 </div>
                 <div className="card text-center">
-                  <Scroll className="w-8 h-8 text-dnd-purple mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-white">{campaign.quest_hooks.length}</div>
-                  <div className="text-gray-400">Quest Hooks</div>
+                  <Scroll className="w-6 h-6 text-green-400 mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">{quests.length}</div>
+                  <div className="text-gray-400 text-sm">Quests</div>
+                </div>
+                <div className="card text-center">
+                  <Sword className="w-6 h-6 text-red-400 mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">{encounters.length}</div>
+                  <div className="text-gray-400 text-sm">Encounters</div>
+                </div>
+                <div className="card text-center">
+                  <Crown className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">{deities.length}</div>
+                  <div className="text-gray-400 text-sm">Deities</div>
+                </div>
+                <div className="card text-center">
+                  <Globe className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                  <div className="text-xl font-bold text-white">{planes.length}</div>
+                  <div className="text-gray-400 text-sm">Planes</div>
                 </div>
               </div>
 
-              {/* Plot Summary */}
-              {campaign.metadata?.plot_summary && (
+              {/* Campaign Configuration */}
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="card">
-                  <h3 className="text-xl font-bold text-white mb-4">Plot Summary</h3>
-                  <p className="text-gray-300">{campaign.metadata.plot_summary}</p>
+                  <h3 className="text-lg font-bold text-white mb-4">Campaign Details</h3>
+                  <div className="space-y-3 text-sm">
+                    {campaign.progression_type && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Progression:</span>
+                        <span className="text-white capitalize">{campaign.progression_type}</span>
+                      </div>
+                    )}
+                    {campaign.difficulty && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Difficulty:</span>
+                        <span className="text-white capitalize">{campaign.difficulty}</span>
+                      </div>
+                    )}
+                    {campaign.starting_level && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Starting Level:</span>
+                        <span className="text-white">{campaign.starting_level}</span>
+                      </div>
+                    )}
+                    {campaign.campaign_length && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Length:</span>
+                        <span className="text-white capitalize">{campaign.campaign_length}</span>
+                      </div>
+                    )}
+                    {campaign.tone && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Tone:</span>
+                        <span className="text-white capitalize">{campaign.tone}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              {/* Central Conflict */}
-              {campaign.metadata?.central_conflict && (
                 <div className="card">
-                  <h3 className="text-xl font-bold text-white mb-4">Central Conflict</h3>
-                  <p className="text-gray-300">{campaign.metadata.central_conflict}</p>
+                  <h3 className="text-lg font-bold text-white mb-4">World Summary</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Races Available:</span>
+                      <span className="text-white">{races.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Classes Available:</span>
+                      <span className="text-white">{classes.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Languages:</span>
+                      <span className="text-white">{languages.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Pantheons:</span>
+                      <span className="text-white">{pantheons.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Regions:</span>
+                      <span className="text-white">{geographyRegions.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              {campaign.additional_notes && (
+                <div className="card">
+                  <h3 className="text-lg font-bold text-white mb-4">Additional Notes</h3>
+                  <p className="text-gray-300 whitespace-pre-wrap">{campaign.additional_notes}</p>
                 </div>
               )}
             </div>
           )}
 
-          {activeTab === 'npcs' && (
+          {activeTab === 'entities' && (
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {campaign.npcs && campaign.npcs.length > 0 ? (
-                campaign.npcs.map((npc) => (
-                  <NPCCard key={npc.id} npc={npc} />
+              {entities.length > 0 ? (
+                entities.map((entity) => (
+                  <EntityCard key={entity.id} entity={entity} />
                 ))
               ) : (
                 <div className="col-span-full text-center py-12">
                   <Users className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">No NPCs Yet</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">No Entities Yet</h3>
                   <p className="text-gray-400">
-                    NPCs will appear here once the campaign generation is complete.
+                    NPCs and entities will appear here once the campaign generation is complete.
                   </p>
                 </div>
               )}
@@ -324,8 +377,8 @@ export default function CampaignDetailPage() {
 
           {activeTab === 'locations' && (
             <div className="grid gap-6 lg:grid-cols-2">
-              {campaign.locations && campaign.locations.length > 0 ? (
-                campaign.locations.map((location) => (
+              {locations.length > 0 ? (
+                locations.map((location) => (
                   <LocationCard key={location.id} location={location} />
                 ))
               ) : (
@@ -341,17 +394,109 @@ export default function CampaignDetailPage() {
           )}
 
           {activeTab === 'quests' && (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {campaign.quest_hooks && campaign.quest_hooks.length > 0 ? (
-                campaign.quest_hooks.map((quest) => (
-                  <QuestHookCard key={quest.id} quest={quest} />
-                ))
+            <div className="space-y-6">
+              {/* Quest Hooks */}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4">Quest Hooks</h3>
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {quests.length > 0 ? (
+                    quests.map((quest) => (
+                      <QuestHookCard key={quest.id} quest={quest} />
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-12">
+                      <Scroll className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-bold text-white mb-2">No Quest Hooks Yet</h3>
+                      <p className="text-gray-400">
+                        Quest hooks will appear here once the campaign generation is complete.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Encounters */}
+              {encounters.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-4">Encounters</h3>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {encounters.map((encounter) => (
+                      <div key={encounter.id} className="card">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-white">{encounter.name}</h4>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            encounter.difficulty === 'easy' ? 'bg-green-500 bg-opacity-20 text-green-400' :
+                            encounter.difficulty === 'medium' ? 'bg-yellow-500 bg-opacity-20 text-yellow-400' :
+                            encounter.difficulty === 'hard' ? 'bg-red-500 bg-opacity-20 text-red-400' :
+                            'bg-purple-500 bg-opacity-20 text-purple-400'
+                          }`}>
+                            {encounter.difficulty}
+                          </span>
+                        </div>
+                        <p className="text-gray-300 text-sm mb-3">{encounter.description}</p>
+                        {encounter.encounter_type && (
+                          <div className="text-gray-400 text-xs">
+                            Type: {encounter.encounter_type}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'world' && (
+            <WorldBuildingCard 
+              pantheons={pantheons}
+              deities={deities}
+              planes={planes}
+              geographyRegions={geographyRegions}
+              economicSystems={economicSystems}
+              legalSystems={legalSystems}
+              historicalPeriods={historicalPeriods}
+              calendarSystems={calendarSystems}
+            />
+          )}
+
+          {activeTab === 'characters' && (
+            <CharacterBuildingCard 
+              races={races}
+              classes={classes}
+              backgrounds={backgrounds}
+              languages={languages}
+            />
+          )}
+
+          {activeTab === 'relationships' && (
+            <div className="space-y-6">
+              {relationshipsData?.entity_relationships && relationshipsData.entity_relationships.length > 0 ? (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-4">Entity Relationships</h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {relationshipsData.entity_relationships.map((rel) => (
+                      <div key={rel.id} className="card">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white font-medium">{rel.relationship_type}</span>
+                          <span className="text-gray-400 text-sm">
+                            Strength: {rel.relationship_strength}
+                          </span>
+                        </div>
+                        <p className="text-gray-300 text-sm">{rel.description}</p>
+                        <div className="mt-2 text-xs text-gray-400">
+                          Entity {rel.entity1_id} ↔ Entity {rel.entity2_id}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
-                <div className="col-span-full text-center py-12">
-                  <Scroll className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">No Quest Hooks Yet</h3>
+                <div className="text-center py-12">
+                  <Crown className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">No Relationships Yet</h3>
                   <p className="text-gray-400">
-                    Quest hooks will appear here once the campaign generation is complete.
+                    Entity relationships will appear here once the campaign generation is complete.
                   </p>
                 </div>
               )}

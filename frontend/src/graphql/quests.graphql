@@ -3,11 +3,16 @@ query GetQuestHooks($campaignId: Int!) {
     id
     title
     description
+    quest_type
     difficulty
+    estimated_sessions
     reward
-    related_npc_ids
+    related_entity_ids
     related_location_ids
+    prerequisites
+    consequences
     status
+    pc_hook_type
     created_at
     updated_at
   }
@@ -18,17 +23,19 @@ query GetQuestHook($id: Int!) {
     id
     title
     description
+    quest_type
     difficulty
+    estimated_sessions
     reward
-    related_npc_ids
+    related_entity_ids
     related_location_ids
+    prerequisites
+    consequences
     status
+    pc_hook_type
     created_at
     updated_at
-    campaign {
-      id
-      name
-    }
+    campaign_id
   }
 }
 
@@ -51,15 +58,17 @@ mutation UpdateQuestStatus($id: Int!, $status: String!) {
 query GetEncounters($campaignId: Int!) {
   encounters(where: { campaign_id: { _eq: $campaignId } }, order_by: { created_at: asc }) {
     id
-    title
+    name
     description
+    encounter_type
     difficulty
-    creatures
+    enemies
     environmental_factors
-    location {
-      id
-      name
-    }
+    treasure
+    experience_reward
+    trigger_conditions
+    resolution_options
+    location_id
   }
 }
 
@@ -67,7 +76,7 @@ mutation InsertEncounters($encounters: [encounters_insert_input!]!) {
   insert_encounters(objects: $encounters) {
     returning {
       id
-      title
+      name
     }
   }
 }

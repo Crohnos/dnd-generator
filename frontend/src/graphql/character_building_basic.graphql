@@ -1,50 +1,37 @@
-# Basic character building queries for tables that exist
+# Character building queries matching actual schema
 
 query GetRacesAndSubraces($campaign_id: Int!) {
   races(where: { campaign_id: { _eq: $campaign_id } }) {
     id
     name
     description
-    size
+    parent_race_id
+    size_category
     speed
-    languages
-    racial_traits
     ability_score_increases
-    lifespan
-    alignment_tendencies
+    racial_traits
+    languages
+    proficiencies
     created_at
-    subraces(order_by: { name: asc }) {
-      id
-      name
-      description
-      additional_traits
-      additional_ability_scores
-      created_at
-    }
+    updated_at
   }
 }
 
 query GetClassesAndSubclasses($campaign_id: Int!) {
-  classes(where: { campaign_id: { _eq: $campaign_id } }) {
+  character_classes(where: { campaign_id: { _eq: $campaign_id } }) {
     id
     name
     description
+    parent_class_id
     hit_die
     primary_ability
     saving_throw_proficiencies
     skill_proficiencies
-    equipment_proficiencies
     class_features
     spellcasting_ability
+    equipment_proficiencies
     created_at
-    subclasses(order_by: { name: asc }) {
-      id
-      name
-      description
-      additional_features
-      additional_spells
-      created_at
-    }
+    updated_at
   }
 }
 
@@ -54,10 +41,11 @@ query GetBackgrounds($campaign_id: Int!) {
     name
     description
     skill_proficiencies
-    language_proficiencies
+    language_options
     tool_proficiencies
     equipment
-    feature
+    feature_name
+    feature_description
     suggested_characteristics
     created_at
     updated_at
@@ -71,8 +59,11 @@ query GetLanguages($campaign_id: Int!) {
     language_type
     script
     speakers
-    prevalence
+    regions
     description
+    complexity
+    writing_system
     created_at
+    updated_at
   }
 }

@@ -1,54 +1,86 @@
 query GetNPCs($campaignId: Int!) {
-  npcs(where: { campaign_id: { _eq: $campaignId } }, order_by: { created_at: asc }) {
+  entities(where: { campaign_id: { _eq: $campaignId }, entity_type: { _eq: "npc" } }, order_by: { created_at: asc }) {
     id
     name
-    role
-    description
-    personality
-    stats
-    secret_info
-    location_npcs {
-      location {
-        id
-        name
-      }
-      relationship_type
-    }
+    entity_type
+    race_id
+    class_id
+    background_id
+    level_or_cr
+    ability_scores
+    hit_points
+    armor_class
+    speed
+    skills
+    saving_throws
+    damage_resistances
+    damage_immunities
+    condition_immunities
+    senses
+    languages
+    special_abilities
+    spells_known
+    personality_traits
+    ideals
+    bonds
+    flaws
+    appearance
+    backstory
+    motivations
+    secrets
+    notes
+    pc_connection_type
+    pc_connection_description
+    created_at
+    updated_at
   }
 }
 
 query GetNPC($id: Int!) {
-  npcs_by_pk(id: $id) {
+  entities_by_pk(id: $id) {
     id
     name
-    role
-    description
-    personality
-    stats
-    secret_info
+    entity_type
+    race_id
+    class_id
+    background_id
+    level_or_cr
+    ability_scores
+    hit_points
+    armor_class
+    speed
+    skills
+    saving_throws
+    damage_resistances
+    damage_immunities
+    condition_immunities
+    senses
+    languages
+    special_abilities
+    spells_known
+    personality_traits
+    ideals
+    bonds
+    flaws
+    appearance
+    backstory
+    motivations
+    secrets
+    notes
+    pc_connection_type
+    pc_connection_description
     created_at
     updated_at
-    campaign {
-      id
-      name
-    }
-    location_npcs {
-      id
-      relationship_type
-      location {
-        id
-        name
-        type
-      }
-    }
+    campaign_id
   }
 }
 
-mutation InsertNPCs($npcs: [npcs_insert_input!]!) {
-  insert_npcs(objects: $npcs) {
+mutation InsertEntities($entities: [entities_insert_input!]!) {
+  insert_entities(objects: $entities) {
     returning {
       id
       name
+      entity_type
     }
   }
 }

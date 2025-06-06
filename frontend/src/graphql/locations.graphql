@@ -2,24 +2,20 @@ query GetLocations($campaignId: Int!) {
   locations(where: { campaign_id: { _eq: $campaignId } }, order_by: { created_at: asc }) {
     id
     name
-    type
+    location_type
+    parent_location_id
+    geography_region_id
     description
-    connections
-    properties
-    location_npcs {
-      id
-      relationship_type
-      npc {
-        id
-        name
-        role
-      }
-    }
-    encounters {
-      id
-      title
-      difficulty
-    }
+    population
+    government_type
+    notable_features
+    climate
+    coordinates
+    size_category
+    accessibility
+    security_level
+    wealth_level
+    pc_significance
   }
 }
 
@@ -27,34 +23,23 @@ query GetLocation($id: Int!) {
   locations_by_pk(id: $id) {
     id
     name
-    type
+    location_type
+    parent_location_id
+    geography_region_id
     description
-    connections
-    properties
+    population
+    government_type
+    notable_features
+    climate
+    coordinates
+    size_category
+    accessibility
+    security_level
+    wealth_level
+    pc_significance
     created_at
     updated_at
-    campaign {
-      id
-      name
-    }
-    location_npcs {
-      id
-      relationship_type
-      npc {
-        id
-        name
-        role
-        description
-      }
-    }
-    encounters {
-      id
-      title
-      description
-      difficulty
-      creatures
-      environmental_factors
-    }
+    campaign_id
   }
 }
 
@@ -67,12 +52,3 @@ mutation InsertLocations($locations: [locations_insert_input!]!) {
   }
 }
 
-mutation InsertLocationNPCs($locationNpcs: [location_npcs_insert_input!]!) {
-  insert_location_npcs(objects: $locationNpcs) {
-    returning {
-      id
-      location_id
-      npc_id
-    }
-  }
-}

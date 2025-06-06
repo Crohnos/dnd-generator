@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCampaignStore, PlayerCharacter } from '@/stores/campaignStore';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Wand2, Info } from 'lucide-react';
 import clsx from 'clsx';
+import { TagInput } from './TagInput';
 
 const WIZARD_STEPS = [
   { id: 0, name: 'Basic Information', description: 'Name your campaign' },
@@ -725,55 +726,37 @@ function StepCharacterDetails({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      Ideals (comma-separated)
+                      Ideals
                     </label>
-                    <input
-                      type="text"
-                      value={character.ideals?.join(', ') || ''}
-                      onChange={(e) =>
-                        onUpdate(index, { 
-                          ...character, 
-                          ideals: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
-                        })
-                      }
-                      placeholder="Justice, Freedom, Knowledge"
-                      className="input w-full"
+                    <TagInput
+                      tags={character.ideals || []}
+                      onChange={(ideals) => onUpdate(index, { ...character, ideals })}
+                      placeholder="Justice, Freedom, Knowledge..."
+                      maxTags={5}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      Bonds (comma-separated)
+                      Bonds
                     </label>
-                    <input
-                      type="text"
-                      value={character.bonds?.join(', ') || ''}
-                      onChange={(e) =>
-                        onUpdate(index, { 
-                          ...character, 
-                          bonds: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
-                        })
-                      }
-                      placeholder="Family, Hometown, Mentor"
-                      className="input w-full"
+                    <TagInput
+                      tags={character.bonds || []}
+                      onChange={(bonds) => onUpdate(index, { ...character, bonds })}
+                      placeholder="Family, Hometown, Mentor..."
+                      maxTags={5}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Flaws (comma-separated)
+                    Flaws
                   </label>
-                  <input
-                    type="text"
-                    value={character.flaws?.join(', ') || ''}
-                    onChange={(e) =>
-                      onUpdate(index, { 
-                        ...character, 
-                        flaws: e.target.value.split(',').map(s => s.trim()).filter(s => s) 
-                      })
-                    }
-                    placeholder="Prideful, Reckless, Greedy"
-                    className="input w-full"
+                  <TagInput
+                    tags={character.flaws || []}
+                    onChange={(flaws) => onUpdate(index, { ...character, flaws })}
+                    placeholder="Prideful, Reckless, Greedy..."
+                    maxTags={5}
                   />
                 </div>
               </div>
@@ -1289,30 +1272,66 @@ function StepReviewEnhanced({
       <div className="bg-dnd-purple/10 border border-dnd-purple/30 p-6 rounded-lg">
         <h4 className="font-semibold mb-2">Enhanced Generation Process</h4>
         <p className="text-sm text-gray-300 mb-3">
-          Your campaign will be generated in three phases:
+          Your campaign will be generated in nine comprehensive phases:
         </p>
-        <div className="space-y-2 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
             <span className="text-gray-300">
-              <strong>Phase 1:</strong> World Building - Calendar, history, geography, deities, economics
+              <strong>Phase 1A:</strong> Core World Systems
             </span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
             <span className="text-gray-300">
-              <strong>Phase 2:</strong> PC-Connected Content - NPCs and locations from character backstories
+              <strong>Phase 1B:</strong> Character Building
             </span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
             <span className="text-gray-300">
-              <strong>Phase 3:</strong> World Population - Additional NPCs, creatures, shops, dungeons
+              <strong>Phase 1C:</strong> Social Framework
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
+            <span className="text-gray-300">
+              <strong>Phase 2A:</strong> PC Entities
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
+            <span className="text-gray-300">
+              <strong>Phase 2B:</strong> PC Locations
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
+            <span className="text-gray-300">
+              <strong>Phase 2C:</strong> PC Items
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
+            <span className="text-gray-300">
+              <strong>Phase 3A:</strong> Quest Hooks & Encounters
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
+            <span className="text-gray-300">
+              <strong>Phase 3B:</strong> World Population
+            </span>
+          </div>
+          <div className="flex items-center gap-2 md:col-span-2 md:justify-center">
+            <div className="w-2 h-2 bg-dnd-purple rounded-full"></div>
+            <span className="text-gray-300">
+              <strong>Phase 3C:</strong> Final Relationships
             </span>
           </div>
         </div>
         <p className="text-sm text-center mt-4 text-gray-400">
-          This process will create a rich, interconnected world tailored to your specifications.
+          This comprehensive process creates deeply interconnected campaigns with rich backstories, complex relationships, and immersive world-building.
         </p>
       </div>
     </div>

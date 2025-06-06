@@ -28,46 +28,63 @@ query GetWorldBuildingData($campaignId: Int!) {
     id
     campaign_id
     name
-    description
-    months
-    days_per_month
-    hours_per_day
-    minutes_per_hour
-    current_date
+    days_per_week
+    weeks_per_month
+    months_per_year
+    month_names
+    day_names
+    holidays
+    current_calendar_date
+    seasons
     special_events
+    metadata
     created_at
+    updated_at
   }
   
-  world_history(where: { campaign_id: { _eq: $campaignId } }) {
+  historical_periods(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
-    era_name
+    period_name
     start_year
     end_year
     description
     major_events
+    key_figures
+    technological_level
+    political_structure
     created_at
+    updated_at
   }
   
   planes(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
     name
-    type
+    plane_type
     description
-    properties
+    characteristics
     access_methods
+    native_creatures
+    planar_traits
+    alignment_influence
+    magic_effects
     created_at
+    updated_at
   }
   
   pantheons(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
     name
+    pantheon_type
+    dominant_alignment
+    cultural_influence
+    primary_worshipers
+    origin_story
     description
-    alignment
-    domains
     created_at
+    updated_at
   }
   
   deities(where: { campaign_id: { _eq: $campaignId } }) {
@@ -75,50 +92,71 @@ query GetWorldBuildingData($campaignId: Int!) {
     campaign_id
     pantheon_id
     name
+    title
     alignment
     domains
-    symbols
+    symbol
+    holy_day
+    favored_weapon
+    divine_rank
+    worshiper_alignments
     description
+    dogma
+    clergy_description
     created_at
+    updated_at
   }
   
   geography_regions(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
     name
-    type
-    description
+    region_type
+    parent_region_id
+    plane_id
     climate
-    terrain_features
+    terrain_types
     natural_resources
-    notable_settlements
+    native_creatures
+    hazards
+    description
+    boundaries
+    population_density
+    magical_properties
     created_at
+    updated_at
   }
   
   economic_systems(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
-    name
-    type
-    description
-    currency_types
+    region_id
+    currency_name
+    currency_abbreviation
+    exchange_rates
     trade_goods
-    taxation_method
-    wealth_distribution
+    economic_model
+    taxation_system
+    banking_system
+    guilds
+    trade_routes
     created_at
+    updated_at
   }
   
   legal_systems(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
-    name
-    type
-    description
-    laws
-    enforcement_methods
+    region_id
+    jurisdiction_name
+    law_type
+    enforcement_agency
     court_system
-    punishment_types
+    punishments
+    legal_codes
+    crime_rates
     created_at
+    updated_at
   }
 }
 
@@ -128,58 +166,63 @@ query GetCharacterBuildingData($campaignId: Int!) {
     campaign_id
     name
     description
-    traits
-    ability_modifiers
-    size
+    parent_race_id
+    size_category
     speed
+    ability_score_increases
+    racial_traits
     languages
+    proficiencies
     created_at
+    updated_at
   }
   
-  subraces(where: { campaign_id: { _eq: $campaignId } }) {
-    id
-    campaign_id
-    race_id
-    name
-    description
-    traits
-    ability_modifiers
-    created_at
-  }
-  
-  classes(where: { campaign_id: { _eq: $campaignId } }) {
+  character_classes(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
     name
     description
+    parent_class_id
     hit_die
     primary_ability
-    saving_throws
-    proficiencies
-    starting_equipment
+    saving_throw_proficiencies
+    skill_proficiencies
+    class_features
+    spellcasting_ability
+    equipment_proficiencies
     created_at
+    updated_at
   }
   
-  subclasses(where: { campaign_id: { _eq: $campaignId } }) {
+  backgrounds(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
-    class_id
     name
     description
-    features
-    spell_casting
+    skill_proficiencies
+    language_options
+    tool_proficiencies
+    equipment
+    feature_name
+    feature_description
+    suggested_characteristics
     created_at
+    updated_at
   }
   
   languages(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
     name
-    type
+    language_type
     script
     speakers
+    regions
     description
+    complexity
+    writing_system
     created_at
+    updated_at
   }
 }
 
@@ -189,50 +232,81 @@ query GetEntitiesAndRelationships($campaignId: Int!) {
     campaign_id
     name
     entity_type
-    subtype
-    description
-    stats
-    abilities
-    equipment
+    race_id
+    class_id
+    background_id
+    level_or_cr
+    ability_scores
+    hit_points
+    armor_class
+    speed
+    skills
+    saving_throws
+    damage_resistances
+    damage_immunities
+    condition_immunities
+    senses
+    languages
+    special_abilities
+    spells_known
+    personality_traits
+    ideals
+    bonds
+    flaws
+    appearance
+    backstory
+    motivations
+    secrets
     notes
-    is_alive
+    pc_connection_type
+    pc_connection_description
     created_at
+    updated_at
   }
   
-  entity_relationships(where: { campaign_id: { _eq: $campaignId } }) {
+  entity_relationships {
     id
-    campaign_id
     entity1_id
     entity2_id
     relationship_type
+    relationship_strength
     description
-    strength
+    is_mutual
+    status
     created_at
+    updated_at
   }
   
   factions(where: { campaign_id: { _eq: $campaignId } }) {
     id
     campaign_id
     name
-    type
-    description
+    faction_type
+    alignment
     goals
-    values
+    methods
     resources
-    territories
-    leadership_structure
+    reputation
+    secrecy_level
+    membership_requirements
+    ranks
+    founded_date
+    current_status
+    description
     created_at
+    updated_at
   }
   
-  faction_relationships(where: { campaign_id: { _eq: $campaignId } }) {
+  faction_relationships {
     id
-    campaign_id
     faction1_id
     faction2_id
     relationship_type
+    relationship_strength
     description
-    tension_level
+    history
     created_at
+    updated_at
   }
 }
 

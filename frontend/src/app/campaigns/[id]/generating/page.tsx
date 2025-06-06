@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Wand2, Users, MapPin, Scroll, CheckCircle, AlertCircle } from 'lucide-react';
+import { Wand2, Users, MapPin, Scroll, CheckCircle, AlertCircle, Globe, Crown, Heart, Sword, Building } from 'lucide-react';
 import { useCampaignProgressSubscription } from '@/generated/graphql';
 
 export default function GeneratingPage() {
@@ -15,10 +15,15 @@ export default function GeneratingPage() {
   const campaignId = parseInt(params.id as string);
 
   const phases = [
-    { name: 'Generating NPCs', icon: Users, description: 'Creating compelling characters with rich backgrounds' },
-    { name: 'Creating Locations', icon: MapPin, description: 'Building immersive locations and environments' },
-    { name: 'Crafting Quest Hooks', icon: Scroll, description: 'Designing engaging quests and storylines' },
-    { name: 'Finalizing Campaign', icon: CheckCircle, description: 'Connecting everything together' },
+    { name: 'Core World Systems', icon: Globe, description: 'Creating calendar systems, history, and geography' },
+    { name: 'Character Building', icon: Users, description: 'Establishing races, classes, and character options' },
+    { name: 'Social Framework', icon: Crown, description: 'Building cultures, factions, and pantheons' },
+    { name: 'PC-Connected Entities', icon: Heart, description: 'Generating NPCs from character backstories' },
+    { name: 'PC-Connected Locations', icon: MapPin, description: 'Creating locations tied to player characters' },
+    { name: 'PC-Connected Items', icon: Sword, description: 'Crafting items relevant to character stories' },
+    { name: 'Quest Hooks & Encounters', icon: Scroll, description: 'Designing adventures and challenges' },
+    { name: 'World Population', icon: Building, description: 'Adding shops, taverns, temples, and NPCs' },
+    { name: 'Final Relationships', icon: CheckCircle, description: 'Connecting all entities and locations' },
   ];
 
   // Subscribe to campaign status updates
@@ -37,38 +42,31 @@ export default function GeneratingPage() {
     if (data?.campaigns_by_pk) {
       const campaign = data.campaigns_by_pk;
 
-      if (campaign.status === 'ready') {
-        // Campaign is ready, show final phase and set progress to 100%
+      if (campaign.status === 'completed') {
+        // Campaign is completed, show final phase and set progress to 100%
         setCurrentPhase(phases.length - 1);
         setProgress(100);
         setTimeout(() => {
           router.push(`/campaigns/${campaignId}`);
         }, 1000);
       } else if (campaign.status === 'error') {
-        setError('Failed to generate campaign. Please try again.');
+        setError(campaign.error_message || 'Failed to generate campaign. Please try again.');
+      } else if (campaign.status === 'generating') {
+        // Use real backend progress data
+        const currentPhaseIndex = Math.max(0, Number(campaign.generation_phase || 1) - 1);
+        const phaseProgress = campaign.phase_progress || 0;
+        const totalPhases = campaign.total_phases || 9;
+        
+        // Calculate overall progress: (completed phases + current phase progress) / total phases
+        const overallProgress = Math.min(99, ((currentPhaseIndex + phaseProgress / 100) / totalPhases) * 100);
+        
+        setCurrentPhase(Math.min(currentPhaseIndex, phases.length - 1));
+        setProgress(overallProgress);
       }
     }
-  }, [data, campaignId, router]);
+  }, [data, campaignId, router, phases.length]);
 
-  useEffect(() => {
-    // Simulate generation progress animation (cap at 99% until actually ready)
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 99) {
-          clearInterval(interval);
-          return 99; // Cap at 99% until real completion
-        }
-        
-        const newProgress = prev + Math.random() * 3; // Slightly slower increments
-        const phase = Math.floor((newProgress / 99) * (phases.length - 1)); // Adjust phase calculation
-        setCurrentPhase(Math.min(phase, phases.length - 2)); // Don't show final phase until ready
-        
-        return Math.min(newProgress, 99);
-      });
-    }, 300); // Slightly slower animation
-
-    return () => clearInterval(interval);
-  }, []); // phases.length is constant, safe to omit
+  // Progress is now handled by real backend data via the subscription effect above
 
   // Trigger generation on mount
   useEffect(() => {

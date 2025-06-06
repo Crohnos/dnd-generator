@@ -6,21 +6,6 @@ query GetCampaigns {
     themes
     status
     created_at
-    npcs_aggregate {
-      aggregate {
-        count
-      }
-    }
-    locations_aggregate {
-      aggregate {
-        count
-      }
-    }
-    quest_hooks_aggregate {
-      aggregate {
-        count
-      }
-    }
   }
 }
 
@@ -32,57 +17,20 @@ query GetCampaign($id: Int!) {
     themes
     player_characters
     status
+    generation_phase
+    phase_progress
+    total_phases
+    current_phase_status
+    error_message
+    progression_type
+    tone
+    difficulty
+    starting_level
+    campaign_length
+    additional_notes
     metadata
     created_at
     updated_at
-    npcs(order_by: { created_at: asc }) {
-      id
-      name
-      role
-      description
-      personality
-      stats
-      secret_info
-    }
-    locations(order_by: { created_at: asc }) {
-      id
-      name
-      type
-      description
-      connections
-      properties
-      location_npcs {
-        id
-        relationship_type
-        npc {
-          id
-          name
-          role
-        }
-      }
-    }
-    quest_hooks(order_by: { created_at: asc }) {
-      id
-      title
-      description
-      difficulty
-      reward
-      related_npc_ids
-      related_location_ids
-      status
-    }
-    encounters(order_by: { created_at: asc }) {
-      id
-      title
-      description
-      difficulty
-      creatures
-      environmental_factors
-      location {
-        id
-        name
-      }
-    }
   }
 }
 
@@ -90,7 +38,23 @@ mutation CreateCampaign($input: campaigns_insert_input!) {
   insert_campaigns_one(object: $input) {
     id
     name
+    setting
+    themes
+    player_characters
     status
+    generation_phase
+    phase_progress
+    total_phases
+    current_phase_status
+    progression_type
+    tone
+    difficulty
+    starting_level
+    campaign_length
+    additional_notes
+    metadata
+    created_at
+    updated_at
   }
 }
 
@@ -105,6 +69,11 @@ subscription CampaignProgress($id: Int!) {
   campaigns_by_pk(id: $id) {
     id
     status
+    generation_phase
+    phase_progress
+    total_phases
+    current_phase_status
+    error_message
     metadata
     updated_at
   }

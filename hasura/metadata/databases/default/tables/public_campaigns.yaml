@@ -2,6 +2,13 @@ table:
   name: campaigns
   schema: public
 array_relationships:
+  - name: entities
+    using:
+      foreign_key_constraint_on:
+        column: campaign_id
+        table:
+          name: entities
+          schema: public
   - name: npcs
     using:
       foreign_key_constraint_on:
@@ -40,6 +47,17 @@ select_permissions:
         - themes
         - player_characters
         - status
+        - generation_phase
+        - phase_progress
+        - total_phases
+        - current_phase_status
+        - error_message
+        - progression_type
+        - tone
+        - difficulty
+        - starting_level
+        - campaign_length
+        - additional_notes
         - metadata
         - created_at
         - updated_at
@@ -54,12 +72,28 @@ insert_permissions:
         - themes
         - player_characters
         - status
+        - generation_phase
+        - phase_progress
+        - total_phases
+        - current_phase_status
+        - error_message
+        - progression_type
+        - tone
+        - difficulty
+        - starting_level
+        - campaign_length
+        - additional_notes
         - metadata
 update_permissions:
   - role: public
     permission:
       columns:
         - status
+        - generation_phase
+        - phase_progress
+        - total_phases
+        - current_phase_status
+        - error_message
         - metadata
       filter: {}
       check: {}

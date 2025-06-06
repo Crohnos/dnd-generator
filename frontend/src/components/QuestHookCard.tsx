@@ -5,11 +5,16 @@ interface QuestHookCardProps {
     id: number;
     title: string;
     description?: string | null;
+    quest_type?: string | null;
     difficulty?: string | null;
+    estimated_sessions?: number | null;
     reward?: string | null;
-    status?: string | null;
-    related_npc_ids?: number[] | null;
+    related_entity_ids?: number[] | null;
     related_location_ids?: number[] | null;
+    prerequisites?: string[] | null;
+    consequences?: string[] | null;
+    status?: string | null;
+    pc_hook_type?: string | null;
   };
 }
 
@@ -50,6 +55,11 @@ export function QuestHookCard({ quest }: QuestHookCardProps) {
         <div className="flex-grow">
           <h3 className="text-lg font-bold text-white mb-2">{quest.title}</h3>
           <div className="flex flex-wrap gap-2">
+            {quest.quest_type && (
+              <span className="px-2 py-1 bg-dnd-purple bg-opacity-20 text-dnd-purple text-xs rounded-full">
+                {quest.quest_type}
+              </span>
+            )}
             {quest.difficulty && (
               <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getDifficultyBadge(quest.difficulty)}`}>
                 {quest.difficulty}
@@ -60,6 +70,11 @@ export function QuestHookCard({ quest }: QuestHookCardProps) {
                 {quest.status}
               </span>
             )}
+            {quest.pc_hook_type && (
+              <span className="px-2 py-1 bg-yellow-600 bg-opacity-20 text-yellow-300 text-xs rounded-full">
+                {quest.pc_hook_type}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -68,6 +83,16 @@ export function QuestHookCard({ quest }: QuestHookCardProps) {
       {quest.description && (
         <p className="text-gray-300 mb-4 leading-relaxed">{quest.description}</p>
       )}
+
+      {/* Quest Details */}
+      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+        {quest.estimated_sessions && (
+          <div>
+            <span className="text-gray-400">Sessions:</span>
+            <span className="text-white ml-2">{quest.estimated_sessions}</span>
+          </div>
+        )}
+      </div>
 
       {/* Reward */}
       {quest.reward && (
@@ -82,24 +107,54 @@ export function QuestHookCard({ quest }: QuestHookCardProps) {
         </div>
       )}
 
+      {/* Prerequisites */}
+      {quest.prerequisites && quest.prerequisites.length > 0 && (
+        <div className="mb-4">
+          <h4 className="text-sm font-semibold text-gray-400 mb-2">Prerequisites</h4>
+          <ul className="text-gray-300 text-sm space-y-1">
+            {quest.prerequisites.map((prereq: string, index: number) => (
+              <li key={index} className="flex items-start">
+                <span className="text-yellow-400 mr-2">⚠</span>
+                {prereq}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Consequences */}
+      {quest.consequences && quest.consequences.length > 0 && (
+        <div className="mb-4">
+          <h4 className="text-sm font-semibold text-gray-400 mb-2">Potential Consequences</h4>
+          <ul className="text-gray-300 text-sm space-y-1">
+            {quest.consequences.map((consequence: string, index: number) => (
+              <li key={index} className="flex items-start">
+                <span className="text-red-400 mr-2">⚡</span>
+                {consequence}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Related Information */}
-      {((quest.related_npc_ids && quest.related_npc_ids.length > 0) || 
+      {((quest.related_entity_ids && quest.related_entity_ids.length > 0) || 
         (quest.related_location_ids && quest.related_location_ids.length > 0)) && (
         <div className="space-y-3">
-          {/* Related NPCs */}
-          {quest.related_npc_ids && quest.related_npc_ids.length > 0 && (
+          {/* Related Entities */}
+          {quest.related_entity_ids && quest.related_entity_ids.length > 0 && (
             <div>
               <div className="flex items-center space-x-2 mb-2">
                 <Users className="w-4 h-4 text-gray-400" />
-                <span className="text-sm font-semibold text-gray-400">Related NPCs</span>
+                <span className="text-sm font-semibold text-gray-400">Related Entities</span>
               </div>
               <div className="flex flex-wrap gap-1">
-                {quest.related_npc_ids.map((npcId) => (
+                {quest.related_entity_ids.map((entityId) => (
                   <span
-                    key={npcId}
+                    key={entityId}
                     className="px-2 py-1 bg-dnd-purple bg-opacity-10 text-dnd-purple text-xs rounded"
                   >
-                    NPC #{npcId}
+                    Entity #{entityId}
                   </span>
                 ))}
               </div>

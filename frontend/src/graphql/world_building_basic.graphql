@@ -1,18 +1,21 @@
-# Basic world building queries for tables that exist
+# World building queries matching actual schema
 
 query GetWorldHistory($campaign_id: Int!) {
-  world_history(
+  historical_periods(
     where: { campaign_id: { _eq: $campaign_id } },
     order_by: { start_year: asc }
   ) {
     id
-    era_name
+    period_name
     start_year
     end_year
     description
     major_events
-    significance
+    key_figures
+    technological_level
+    political_structure
     created_at
+    updated_at
   }
 }
 
@@ -21,13 +24,17 @@ query GetGeographyRegions($campaign_id: Int!) {
     id
     name
     region_type
+    parent_region_id
+    plane_id
     climate
-    terrain
-    notable_features
-    native_flora
-    native_fauna
-    resources
+    terrain_types
+    natural_resources
+    native_creatures
     hazards
+    description
+    boundaries
+    population_density
+    magical_properties
     created_at
     updated_at
   }
@@ -37,26 +44,33 @@ query GetPantheonsAndDeities($campaign_id: Int!) {
   pantheons(where: { campaign_id: { _eq: $campaign_id } }) {
     id
     name
-    description
-    origin_culture
     pantheon_type
-    influence_level
+    dominant_alignment
+    cultural_influence
+    primary_worshipers
+    origin_story
+    description
     created_at
+    updated_at
   }
   
   deities(where: { campaign_id: { _eq: $campaign_id } }) {
     id
+    pantheon_id
     name
     title
     alignment
     domains
     symbol
+    holy_day
+    favored_weapon
+    divine_rank
+    worshiper_alignments
     description
-    worshippers
-    holy_days
-    clergy_structure
+    dogma
+    clergy_description
     created_at
-    pantheon_id
+    updated_at
   }
 }
 
@@ -64,12 +78,14 @@ query GetPlanes($campaign_id: Int!) {
   planes(where: { campaign_id: { _eq: $campaign_id } }) {
     id
     name
-    description
     plane_type
-    accessibility
+    description
+    characteristics
+    access_methods
     native_creatures
     planar_traits
-    notable_locations
+    alignment_influence
+    magic_effects
     created_at
     updated_at
   }
@@ -78,14 +94,16 @@ query GetPlanes($campaign_id: Int!) {
 query GetEconomicSystems($campaign_id: Int!) {
   economic_systems(where: { campaign_id: { _eq: $campaign_id } }) {
     id
-    name
-    economic_type
-    base_currency
-    currency_system
-    trade_routes
-    major_exports
-    major_imports
+    region_id
+    currency_name
+    currency_abbreviation
+    exchange_rates
+    trade_goods
+    economic_model
     taxation_system
+    banking_system
+    guilds
+    trade_routes
     created_at
     updated_at
   }
@@ -94,13 +112,14 @@ query GetEconomicSystems($campaign_id: Int!) {
 query GetLegalSystems($campaign_id: Int!) {
   legal_systems(where: { campaign_id: { _eq: $campaign_id } }) {
     id
-    name
-    government_type
-    ruling_body
-    law_enforcement
+    region_id
+    jurisdiction_name
+    law_type
+    enforcement_agency
     court_system
-    punishment_system
-    citizen_rights
+    punishments
+    legal_codes
+    crime_rates
     created_at
     updated_at
   }
