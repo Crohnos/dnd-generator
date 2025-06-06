@@ -197,6 +197,7 @@ pub struct CreateCampaignRequest {
     pub campaign_length: Option<String>,
     pub additional_notes: Option<String>,
     pub metadata: Option<JsonValue>,
+    pub use_standard_content: Option<bool>,
     // Enhanced fields for world building
     pub world_building: Option<WorldBuildingConfig>,
     pub campaign_specifics: Option<CampaignSpecifics>,

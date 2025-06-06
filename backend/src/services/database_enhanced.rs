@@ -69,7 +69,7 @@ impl DatabaseServiceEnhanced {
     
     pub async fn update_campaign_status_completed(&self, campaign_id: i32) -> ApiResult<()> {
         sqlx::query(
-            "UPDATE campaigns SET status = 'ready', updated_at = CURRENT_TIMESTAMP WHERE id = $1"
+            "UPDATE campaigns SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = $1"
         )
         .bind(campaign_id)
         .execute(&self.pool)

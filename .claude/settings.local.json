@@ -28,7 +28,8 @@
       "Bash(just dev:*)",
       "Bash(python3:*)",
       "Bash(just db-reset:*)",
-      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -l)"
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -l)",
+      "Bash(PGPASSWORD=postgres psql:*)"
     ],
     "deny": []
   },

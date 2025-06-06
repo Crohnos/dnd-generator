@@ -72,6 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         campaign_length: Some("medium".to_string()),
         additional_notes: Some("Focus on dungeon exploration and political intrigue".to_string()),
         metadata: Some(json!({})),
+        use_standard_content: Some(true),
         world_building: None,
         campaign_specifics: None,
         generation_preferences: None,

@@ -36,6 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         campaign_length: Some("short".to_string()),
         additional_notes: Some("Test campaign for database operations".to_string()),
         metadata: Some(json!({})),
+        use_standard_content: Some(true),
         world_building: None,
         campaign_specifics: None,
         generation_preferences: None,

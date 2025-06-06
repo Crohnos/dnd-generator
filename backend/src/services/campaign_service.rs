@@ -1,21 +1,30 @@
 use crate::error::{ApiError, ApiResult};
 use crate::models::{Campaign, CampaignDetail, CreateCampaignRequest, UpdateCampaignRequest, Npc, Location, QuestHook, Encounter};
-use crate::services::GraphQLClient;
+use crate::services::{GraphQLClient, ReferenceDataService};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
 pub struct CampaignService {
     graphql_client: Arc<GraphQLClient>,
+    reference_data_service: Arc<ReferenceDataService>,
 }
 
 impl CampaignService {
     pub fn new(graphql_client: Arc<GraphQLClient>) -> Self {
-        Self { graphql_client }
+        let reference_data_service = Arc::new(ReferenceDataService::new(graphql_client.clone()));
+        Self { 
+            graphql_client,
+            reference_data_service,
+        }
     }
 
     pub async fn create_campaign(&self, req: CreateCampaignRequest) -> ApiResult<Campaign> {
         // Merge enhanced data into metadata
         let mut metadata = req.metadata.unwrap_or(serde_json::json!({}));
+        
+        // Store the use_standard_content flag in metadata
+        let use_standard_content = req.use_standard_content.unwrap_or(false);
+        metadata["use_standard_content"] = json!(use_standard_content);
         
         if let Some(world_building) = req.world_building {
             metadata["world_building"] = serde_json::to_value(world_building).unwrap_or(serde_json::json!({}));
@@ -51,6 +60,15 @@ impl CampaignService {
         // Convert GraphQL result to Campaign model
         let campaign: Campaign = serde_json::from_value(result)
             .map_err(|e| ApiError::BadRequest(format!("Failed to parse campaign: {}", e)))?;
+
+        // If use_standard_content is true, seed the reference data
+        if use_standard_content {
+            if let Err(e) = self.reference_data_service.seed_standard_dnd_content(campaign.id).await {
+                tracing::error!("Failed to seed standard D&D content for campaign {}: {}", campaign.id, e);
+                // We don't fail the campaign creation if seeding fails
+                // The generation can still proceed with custom content
+            }
+        }
 
         Ok(campaign)
     }

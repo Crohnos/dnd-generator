@@ -98,6 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         campaign_length: Some("forever".to_string()), // Invalid length
         additional_notes: Some("x".repeat(10000)), // Very long notes
         metadata: Some(json!({"test": "data"})),
+        use_standard_content: Some(false),
         world_building: None,
         campaign_specifics: None,
         generation_preferences: None,

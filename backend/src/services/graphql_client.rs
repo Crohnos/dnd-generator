@@ -501,12 +501,12 @@ impl GraphQLClient {
 
     pub async fn save_phase_2a_data(&self, campaign_id: i32, phase_data: &Value) -> ApiResult<Vec<String>> {
         let mut saved_entities = Vec::new();
+        let campaign_client = CampaignGraphQLClient::new(self.clone(), campaign_id);
 
         // Entities (PC-connected NPCs)
         if let Some(entities) = phase_data.get("entities").and_then(|v| v.as_array()) {
             for entity in entities {
                 let mut entity_obj = entity.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                entity_obj.insert("campaign_id".to_string(), json!(campaign_id));
                 
                 // Validate and clean class_id to prevent foreign key violations
                 if let Some(class_id) = entity_obj.get("class_id") {
@@ -518,7 +518,7 @@ impl GraphQLClient {
                     }
                 }
                 
-                self.insert_one("entities", json!(entity_obj)).await?;
+                campaign_client.insert_one("entities", json!(entity_obj)).await?;
                 saved_entities.push("entities".to_string());
             }
         }
@@ -600,13 +600,26 @@ impl GraphQLClient {
 
     pub async fn save_phase_3a_data(&self, campaign_id: i32, phase_data: &Value) -> ApiResult<Vec<String>> {
         let mut saved_entities = Vec::new();
+        let campaign_client = CampaignGraphQLClient::new(self.clone(), campaign_id);
 
         // Quest hooks
         if let Some(quest_hooks) = phase_data.get("quest_hooks").and_then(|v| v.as_array()) {
             for quest in quest_hooks {
                 let mut quest_obj = quest.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                quest_obj.insert("campaign_id".to_string(), json!(campaign_id));
-                self.insert_one("quest_hooks", json!(quest_obj)).await?;
+                
+                // Validate and fix status field
+                let status = quest_obj.get("status")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("available");
+                
+                // Ensure status is one of allowed values
+                let valid_status = match status {
+                    "available" | "active" | "completed" => status,
+                    _ => "available" // Default to available for invalid values
+                };
+                quest_obj.insert("status".to_string(), json!(valid_status));
+                
+                campaign_client.insert_one("quest_hooks", json!(quest_obj)).await?;
                 saved_entities.push("quest_hooks".to_string());
             }
         }
@@ -614,9 +627,8 @@ impl GraphQLClient {
         // Encounters
         if let Some(encounters) = phase_data.get("encounters").and_then(|v| v.as_array()) {
             for encounter in encounters {
-                let mut enc_obj = encounter.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                enc_obj.insert("campaign_id".to_string(), json!(campaign_id));
-                self.insert_one("encounters", json!(enc_obj)).await?;
+                let encounter_obj = encounter.as_object().unwrap_or(&serde_json::Map::new()).clone();
+                campaign_client.insert_one("encounters", json!(encounter_obj)).await?;
                 saved_entities.push("encounters".to_string());
             }
         }
@@ -783,12 +795,13 @@ impl GraphQLClient {
 
     pub async fn save_phase_3c_data(&self, campaign_id: i32, phase_data: &Value) -> ApiResult<Vec<String>> {
         let mut saved_entities = Vec::new();
+        let campaign_client = CampaignGraphQLClient::new(self.clone(), campaign_id);
 
         // Entity relationships
         if let Some(entity_rels) = phase_data.get("entity_relationships").and_then(|v| v.as_array()) {
             for rel in entity_rels {
                 let rel_obj = rel.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("entity_relationships", json!(rel_obj)).await?;
+                campaign_client.insert_one("entity_relationships", json!(rel_obj)).await?;
                 saved_entities.push("entity_relationships".to_string());
             }
         }
@@ -797,7 +810,7 @@ impl GraphQLClient {
         if let Some(entity_factions) = phase_data.get("entity_factions").and_then(|v| v.as_array()) {
             for ef in entity_factions {
                 let ef_obj = ef.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("entity_factions", json!(ef_obj)).await?;
+                campaign_client.insert_one("entity_factions", json!(ef_obj)).await?;
                 saved_entities.push("entity_factions".to_string());
             }
         }
@@ -806,7 +819,7 @@ impl GraphQLClient {
         if let Some(entity_locs) = phase_data.get("entity_locations").and_then(|v| v.as_array()) {
             for el in entity_locs {
                 let el_obj = el.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("entity_locations", json!(el_obj)).await?;
+                campaign_client.insert_one("entity_locations", json!(el_obj)).await?;
                 saved_entities.push("entity_locations".to_string());
             }
         }
@@ -815,7 +828,7 @@ impl GraphQLClient {
         if let Some(entity_items) = phase_data.get("entity_items").and_then(|v| v.as_array()) {
             for ei in entity_items {
                 let ei_obj = ei.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("entity_items", json!(ei_obj)).await?;
+                campaign_client.insert_one("entity_items", json!(ei_obj)).await?;
                 saved_entities.push("entity_items".to_string());
             }
         }
@@ -824,7 +837,7 @@ impl GraphQLClient {
         if let Some(location_items) = phase_data.get("location_items").and_then(|v| v.as_array()) {
             for li in location_items {
                 let li_obj = li.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("location_items", json!(li_obj)).await?;
+                campaign_client.insert_one("location_items", json!(li_obj)).await?;
                 saved_entities.push("location_items".to_string());
             }
         }
@@ -833,7 +846,7 @@ impl GraphQLClient {
         if let Some(quest_entities) = phase_data.get("quest_entities").and_then(|v| v.as_array()) {
             for qe in quest_entities {
                 let qe_obj = qe.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("quest_entities", json!(qe_obj)).await?;
+                campaign_client.insert_one("quest_entities", json!(qe_obj)).await?;
                 saved_entities.push("quest_entities".to_string());
             }
         }
@@ -842,7 +855,7 @@ impl GraphQLClient {
         if let Some(quest_locs) = phase_data.get("quest_locations").and_then(|v| v.as_array()) {
             for ql in quest_locs {
                 let ql_obj = ql.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("quest_locations", json!(ql_obj)).await?;
+                campaign_client.insert_one("quest_locations", json!(ql_obj)).await?;
                 saved_entities.push("quest_locations".to_string());
             }
         }
@@ -851,7 +864,7 @@ impl GraphQLClient {
         if let Some(faction_rels) = phase_data.get("faction_relationships").and_then(|v| v.as_array()) {
             for fr in faction_rels {
                 let fr_obj = fr.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("faction_relationships", json!(fr_obj)).await?;
+                campaign_client.insert_one("faction_relationships", json!(fr_obj)).await?;
                 saved_entities.push("faction_relationships".to_string());
             }
         }
@@ -860,11 +873,65 @@ impl GraphQLClient {
         if let Some(race_cultures) = phase_data.get("race_cultures").and_then(|v| v.as_array()) {
             for rc in race_cultures {
                 let rc_obj = rc.as_object().unwrap_or(&serde_json::Map::new()).clone();
-                self.insert_one("race_cultures", json!(rc_obj)).await?;
+                campaign_client.insert_one("race_cultures", json!(rc_obj)).await?;
                 saved_entities.push("race_cultures".to_string());
             }
         }
 
         Ok(saved_entities)
+    }
+}
+
+/// Campaign-aware GraphQL client that automatically injects campaign_id
+pub struct CampaignGraphQLClient {
+    client: GraphQLClient,
+    campaign_id: i32,
+}
+
+impl CampaignGraphQLClient {
+    pub fn new(client: GraphQLClient, campaign_id: i32) -> Self {
+        Self { client, campaign_id }
+    }
+
+    /// Insert data with automatic campaign_id injection
+    pub async fn insert_one(&self, table: &str, mut data: Value) -> ApiResult<Value> {
+        // Automatically inject campaign_id if the table should have it
+        // (all tables except 'campaigns' itself)
+        if table != "campaigns" {
+            if let Some(obj) = data.as_object_mut() {
+                obj.insert("campaign_id".to_string(), json!(self.campaign_id));
+            }
+        }
+        
+        self.client.insert_one(table, data).await
+    }
+
+    /// Insert multiple items with automatic campaign_id injection
+    pub async fn insert_many(&self, table: &str, mut items: Vec<Value>) -> ApiResult<Vec<Value>> {
+        // Automatically inject campaign_id for each item
+        if table != "campaigns" {
+            for item in &mut items {
+                if let Some(obj) = item.as_object_mut() {
+                    obj.insert("campaign_id".to_string(), json!(self.campaign_id));
+                }
+            }
+        }
+        
+        // Insert each item individually since base client doesn't have insert_many
+        let mut results = Vec::new();
+        for item in items {
+            let result = self.client.insert_one(table, item).await?;
+            results.push(result);
+        }
+        Ok(results)
+    }
+
+    /// Pass through other methods to the underlying client
+    pub async fn execute(&self, query: &str, variables: Option<Value>) -> ApiResult<Value> {
+        self.client.execute(query, variables).await
+    }
+
+    pub async fn update_by_pk(&self, table: &str, pk_columns: Value, set_data: Value) -> ApiResult<Value> {
+        self.client.update_by_pk(table, pk_columns, set_data).await
     }
 }
