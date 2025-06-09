@@ -72,4 +72,10 @@ postgres_prod_data/
 
 # Claude
 .claude
-.gitignore
+
+# Markdown documentation files (to hide from main view)
+*.md
+!README.md
+
+# Shell scripts
+*.sh

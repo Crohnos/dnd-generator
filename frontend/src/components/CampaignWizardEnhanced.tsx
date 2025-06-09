@@ -930,11 +930,6 @@ function StepWorldBuilding({
   campaignSpecifics: any;
   setCampaignSpecifics: (value: any) => void;
 }) {
-  const [newDeity, setNewDeity] = useState('');
-  const [newContinent, setNewContinent] = useState('');
-  const [newCity, setNewCity] = useState('');
-  const [newEvent, setNewEvent] = useState('');
-  const [newQuestHook, setNewQuestHook] = useState('');
   const [newVillain, setNewVillain] = useState({ name: '', type: '', goals: '' });
   const [newLocation, setNewLocation] = useState({ name: '', type: '', significance: '' });
 
@@ -997,54 +992,12 @@ function StepWorldBuilding({
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Deities</label>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={newDeity}
-              onChange={(e) => setNewDeity(e.target.value)}
-              placeholder="Add a deity name"
-              className="input flex-1"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && newDeity) {
-                  setWorldBuilding({ 
-                    ...worldBuilding, 
-                    deities: [...worldBuilding.deities, newDeity] 
-                  });
-                  setNewDeity('');
-                }
-              }}
-            />
-            <button
-              onClick={() => {
-                if (newDeity) {
-                  setWorldBuilding({ 
-                    ...worldBuilding, 
-                    deities: [...worldBuilding.deities, newDeity] 
-                  });
-                  setNewDeity('');
-                }
-              }}
-              className="btn-secondary"
-            >
-              Add
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {worldBuilding.deities.map((deity: string, index: number) => (
-              <span key={index} className="px-2 py-1 bg-gray-700 rounded text-sm flex items-center gap-1">
-                {deity}
-                <button
-                  onClick={() => setWorldBuilding({
-                    ...worldBuilding,
-                    deities: worldBuilding.deities.filter((_: any, i: number) => i !== index)
-                  })}
-                  className="text-red-400 hover:text-red-300"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
+          <TagInput
+            tags={worldBuilding.deities}
+            onChange={(deities) => setWorldBuilding({ ...worldBuilding, deities })}
+            placeholder="Add deity names..."
+            suggestions={['Bahamut', 'Tiamat', 'Pelor', 'Moradin', 'Corellon', 'Tyr', 'Tempus', 'Mystra']}
+          />
         </div>
       </div>
 
@@ -1054,65 +1007,21 @@ function StepWorldBuilding({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Continents</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newContinent}
-                onChange={(e) => setNewContinent(e.target.value)}
-                placeholder="Add continent"
-                className="input flex-1"
-              />
-              <button
-                onClick={() => {
-                  if (newContinent) {
-                    setWorldBuilding({ 
-                      ...worldBuilding, 
-                      continents: [...worldBuilding.continents, newContinent] 
-                    });
-                    setNewContinent('');
-                  }
-                }}
-                className="btn-secondary text-sm"
-              >
-                Add
-              </button>
-            </div>
-            <div className="mt-2 space-y-1">
-              {worldBuilding.continents.map((c: string, i: number) => (
-                <div key={i} className="text-sm text-gray-300">• {c}</div>
-              ))}
-            </div>
+            <TagInput
+              tags={worldBuilding.continents}
+              onChange={(continents) => setWorldBuilding({ ...worldBuilding, continents })}
+              placeholder="Add continent names..."
+              suggestions={['Faerun', 'Khorvaire', 'Tal\'Dorei', 'Exandria']}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Major Cities</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newCity}
-                onChange={(e) => setNewCity(e.target.value)}
-                placeholder="Add city"
-                className="input flex-1"
-              />
-              <button
-                onClick={() => {
-                  if (newCity) {
-                    setWorldBuilding({ 
-                      ...worldBuilding, 
-                      majorCities: [...worldBuilding.majorCities, newCity] 
-                    });
-                    setNewCity('');
-                  }
-                }}
-                className="btn-secondary text-sm"
-              >
-                Add
-              </button>
-            </div>
-            <div className="mt-2 space-y-1">
-              {worldBuilding.majorCities.map((c: string, i: number) => (
-                <div key={i} className="text-sm text-gray-300">• {c}</div>
-              ))}
-            </div>
+            <TagInput
+              tags={worldBuilding.majorCities}
+              onChange={(majorCities) => setWorldBuilding({ ...worldBuilding, majorCities })}
+              placeholder="Add city names..."
+              suggestions={['Waterdeep', 'Baldur\'s Gate', 'Neverwinter', 'Sharn', 'Emon']}
+            />
           </div>
         </div>
       </div>
@@ -1132,34 +1041,12 @@ function StepWorldBuilding({
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Initial Quest Hooks</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newQuestHook}
-              onChange={(e) => setNewQuestHook(e.target.value)}
-              placeholder="Add a quest hook"
-              className="input flex-1"
-            />
-            <button
-              onClick={() => {
-                if (newQuestHook) {
-                  setCampaignSpecifics({ 
-                    ...campaignSpecifics, 
-                    initialQuestHooks: [...campaignSpecifics.initialQuestHooks, newQuestHook] 
-                  });
-                  setNewQuestHook('');
-                }
-              }}
-              className="btn-secondary text-sm"
-            >
-              Add
-            </button>
-          </div>
-          <div className="mt-2 space-y-1">
-            {campaignSpecifics.initialQuestHooks.map((q: string, i: number) => (
-              <div key={i} className="text-sm text-gray-300">• {q}</div>
-            ))}
-          </div>
+          <TagInput
+            tags={campaignSpecifics.initialQuestHooks}
+            onChange={(initialQuestHooks) => setCampaignSpecifics({ ...campaignSpecifics, initialQuestHooks })}
+            placeholder="Add quest hook ideas..."
+            suggestions={['Missing person investigation', 'Ancient artifact discovery', 'Political conspiracy', 'Monster threat', 'Trade route problems']}
+          />
         </div>
       </div>
     </div>

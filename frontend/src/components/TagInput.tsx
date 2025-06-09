@@ -115,17 +115,19 @@ export function TagInput({
       )}
       
       {/* Helper Text */}
-      {maxTags && (
-        <div className="text-xs text-gray-400 mt-1">
-          {tags.length}/{maxTags} tags
-          {tags.length === 0 && " • Press Enter or comma to add"}
-        </div>
-      )}
-      {!maxTags && tags.length === 0 && (
-        <div className="text-xs text-gray-400 mt-1">
-          Press Enter or comma to add tags
-        </div>
-      )}
+      <div className="text-xs text-gray-400 mt-1 flex justify-between">
+        <span>
+          {tags.length === 0 
+            ? "Press Enter or comma to add tags" 
+            : maxTags 
+              ? `${tags.length}/${maxTags} tags` 
+              : `${tags.length} tags`
+          }
+        </span>
+        {maxTags && tags.length >= maxTags && (
+          <span className="text-yellow-400">Maximum reached</span>
+        )}
+      </div>
     </div>
   );
 }
